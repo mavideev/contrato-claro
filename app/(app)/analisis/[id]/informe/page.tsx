@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { BottomBar, FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { RiskCounts } from "@/components/ui/pill";
-import { BackLink, Title } from "@/components/ui/typography";
+import { Title } from "@/components/ui/typography";
 import { CONTRACT_LABEL } from "@/lib/analysis/presentation";
 import { requireUser } from "@/lib/auth/session";
 import { scoped } from "@/lib/db/scoped";
@@ -49,7 +49,6 @@ async function Report({ params }: Pick<PageProps<"/analisis/[id]/informe">, "par
 
   return (
     <>
-      <BackLink href="/analisis">Mis análisis</BackLink>
       <div className="flex flex-col gap-3.5 md:flex-row md:flex-wrap md:items-end md:justify-between md:gap-4">
         <div className="flex flex-col gap-1 md:gap-1.5">
           <Title>Informe del contrato</Title>

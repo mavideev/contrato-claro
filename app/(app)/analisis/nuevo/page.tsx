@@ -19,9 +19,14 @@ export default function Page() {
               BETA
             </span>
           </div>
-          <Link href="/analisis" className="inline-flex min-h-11 items-center text-[15px] font-semibold text-primary-hover">
-            Mis análisis
-          </Link>
+          <nav aria-label="Principal" className="flex items-center gap-4 text-[15px] font-semibold">
+            <Link href="/analisis" className="inline-flex min-h-11 items-center text-primary-hover">
+              Mis análisis
+            </Link>
+            <Link href="/cuenta" className="hidden min-h-11 items-center text-primary-hover md:inline-flex">
+              Cuenta
+            </Link>
+          </nav>
         </div>
         <div className="flex max-w-[620px] flex-col gap-2.5 md:gap-3.5">
           <h1 className="font-display text-[32px] leading-[1.1] font-semibold tracking-[-0.01em] md:text-[46px] md:leading-[1.08]">

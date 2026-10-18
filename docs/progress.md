@@ -12,7 +12,8 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 | 2. Esquema, migraciones y seed | ✅ | `db/schema.ts`, migraciones Drizzle, seed con 2 usuarios y 4 análisis, `lib/db/scoped.ts` con tests de aislamiento | `1925308` |
 | 3. Cuentas (Better Auth) | ✅ | ver detalle abajo | `7c70e5e` |
 | 4a. Sistema visual y panel | ✅ | ver detalle abajo | `c95df7c` |
-| 4b. Flujo del análisis | ✅ | ver detalle abajo | este commit |
+| 4b. Flujo del análisis | ✅ | ver detalle abajo | `b8aa7a4` |
+| 4c. Navegación entre pantallas (correcciones de la prueba manual) | ✅ | encabezado en el flujo, panel vacío | este commit |
 | 5. Stubs: webhook de Mercado Pago, subida de prueba a S3 | ⏳ | specs 04 y 05 | |
 | 6. CI (GitHub Actions) y `render.yaml` | ⏳ | spec 00 | |
 
@@ -54,7 +55,7 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 | `/` redirige a `/analisis` (sin landing por ahora) | ✅ | `next.config.ts` |
 | Textos de guardado corregidos en Registro y Mis análisis | ✅ | |
 | Playwright: smoke por ruta en 1280 y 390 (sin errores de consola ni scroll horizontal) y recorrido de borrar cuenta | ✅ | `e2e/` |
-| Panel vacío | 🟡 | sin análisis se redirige a `/analisis/nuevo` (spec 02), así que el estado vacío no se ve |
+| Panel vacío («Todavía no analizaste ningún contrato») | ✅ | parte 4c: antes redirigía a subir y dejaba Pagos y Cuenta inaccesibles |
 
 ### Parte 4b — Flujo del análisis (spec 03)
 

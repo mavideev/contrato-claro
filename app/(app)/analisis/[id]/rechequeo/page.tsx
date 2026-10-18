@@ -5,7 +5,7 @@ import { createRecheck, startRecheckPayment } from "@/app/(app)/analisis/actions
 import { BottomBar, FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { RecheckUpload } from "@/components/app/recheck-upload";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { BackLink, Kicker, Title } from "@/components/ui/typography";
+import { Kicker, Title } from "@/components/ui/typography";
 import { requireUser } from "@/lib/auth/session";
 import { scoped } from "@/lib/db/scoped";
 import { wordDiff } from "@/lib/diff";
@@ -37,7 +37,6 @@ async function Recheck({ params }: Pick<PageProps<"/analisis/[id]/rechequeo">, "
 
   const header = (subtitle: string) => (
     <>
-      <BackLink href="/analisis">Mis análisis</BackLink>
       <div className="flex flex-col gap-1.5">
         <Title>Re-chequeo del día de la firma</Title>
         <p className="text-sm leading-normal text-ink-2 md:text-base">{subtitle}</p>

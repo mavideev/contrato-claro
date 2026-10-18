@@ -42,6 +42,8 @@ test.describe("con sesión (demo)", () => {
     ];
     for (const path of paths) {
       await visit(page, path);
+      // Todas las pantallas del flujo permiten volver al panel.
+      await expect(page.getByRole("link", { name: "Mis análisis" }).first(), path).toBeVisible();
       await page.screenshot({ path: info.outputPath(`${shotName(path)}.png`), fullPage: true });
     }
   });

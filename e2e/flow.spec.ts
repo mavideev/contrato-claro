@@ -7,6 +7,17 @@ import { deleteAccount, seedIds, signUpAndVerify } from "./helpers";
 test.describe("con un usuario nuevo", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
+  test("una cuenta nueva ve el panel vacío y llega a Cuenta y Pagos", async ({ page, request }) => {
+    await signUpAndVerify(page, request);
+    await page.getByRole("link", { name: "Mis análisis" }).click();
+    await expect(page.getByText("Todavía no analizaste ningún contrato")).toBeVisible();
+    await page.getByRole("link", { name: "Pagos" }).filter({ visible: true }).click();
+    await expect(page.getByRole("heading", { name: "Pagos", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Cuenta" }).filter({ visible: true }).click();
+    await expect(page.getByRole("heading", { name: "Cuenta", exact: true })).toBeVisible();
+    await deleteAccount(page);
+  });
+
   test("subir → confirmar → vista previa → pagar → pago pendiente", async ({
     page,
     request,

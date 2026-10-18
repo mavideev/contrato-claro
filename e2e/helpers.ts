@@ -38,7 +38,15 @@ export async function signUpAndVerify(page: Page, request: APIRequestContext) {
   await page.goto("/registro");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Contraseña").fill(password);
-  await page.getByRole("button", { name: "Crear cuenta" }).click();
+  // El rate limit de Better Auth permite 3 registros cada 10 s por IP y los
+  // tests corren en paralelo desde la misma IP: si lo alcanza, espera y reintenta.
+  for (let attempt = 0; ; attempt++) {
+    await page.getByRole("button", { name: "Crear cuenta" }).click();
+    const limited = page.getByText("Hiciste muchos intentos seguidos");
+    await expect(page.getByRole("heading", { name: "Revisá tu email" }).or(limited)).toBeVisible();
+    if (!(await limited.isVisible()) || attempt === 3) break;
+    await page.waitForTimeout(11_000);
+  }
   await expect(page).toHaveURL(/\/verificar\?email=/);
 
   let link = "";

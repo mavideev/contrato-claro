@@ -19,7 +19,7 @@ Better Auth (`lib/auth/`) con el adaptador de Drizzle sobre la misma base, sesio
 | `/recuperar` | pide el email y manda el link; `/recuperar/nueva?token=` pide la contraseña nueva | agregada |
 | `/verificar` | «Te mandamos un mail a …», con botón de reenviar | agregada |
 
-Después de entrar se redirige a `/analisis`. Si no hay análisis, se va a `/analisis/nuevo`.
+Después de entrar se redirige a `/analisis`. Después de crear la cuenta (al verificar el email), a `/analisis/nuevo`. Si no hay análisis, `/analisis` muestra el panel vacío con «Subir mi primer contrato».
 
 **Texto legal del registro** (reemplaza «No guardamos tu contrato»):
 > Guardamos tu contrato cifrado mientras tengas cuenta. Podés borrarlo cuando quieras. Al continuar aceptás los términos y la política de privacidad.

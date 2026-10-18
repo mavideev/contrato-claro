@@ -6,7 +6,7 @@ import { FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { ProgressSteps } from "@/components/app/progress-steps";
 import { Button } from "@/components/ui/button";
 import { RiskCounts } from "@/components/ui/pill";
-import { BackLink, Kicker, Title } from "@/components/ui/typography";
+import { Kicker, Title } from "@/components/ui/typography";
 import { loadAnalysis } from "@/lib/analysis/load";
 import { formatPrice } from "@/lib/format";
 
@@ -39,7 +39,6 @@ async function Status({ params }: Pick<PageProps<"/analisis/[id]/estado">, "para
 
   return (
     <>
-      <BackLink href="/analisis">Mis análisis</BackLink>
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:gap-12">
         <div className="flex flex-col gap-5 md:flex-[1_1_360px] md:gap-[22px]">
           <Title>{heading}</Title>

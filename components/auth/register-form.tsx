@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth/client";
-import { DEFAULT_AFTER_LOGIN } from "@/lib/auth/redirect";
+import { AFTER_SIGN_UP } from "@/lib/auth/redirect";
 import { Button, Divider, Field, GoogleButton, Heading, Notice } from "./ui";
 
 export function RegisterForm({ google }: { google: boolean }) {
@@ -23,14 +23,16 @@ export function RegisterForm({ google }: { google: boolean }) {
       password: String(data.get("password")),
       // El registro no pide nombre; se puede cambiar después en /cuenta.
       name: email.split("@")[0],
-      callbackURL: DEFAULT_AFTER_LOGIN,
+      callbackURL: AFTER_SIGN_UP,
     });
     if (!error) return router.push(`/verificar?email=${encodeURIComponent(email)}`);
     setPending(false);
     setError(
-      error.code === "PASSWORD_TOO_SHORT"
-        ? "La contraseña tiene que tener al menos 8 caracteres."
-        : "No pudimos crear la cuenta. Revisá los datos y probá de nuevo.",
+      error.status === 429
+        ? "Hiciste muchos intentos seguidos. Esperá un minuto y probá de nuevo."
+        : error.code === "PASSWORD_TOO_SHORT"
+          ? "La contraseña tiene que tener al menos 8 caracteres."
+          : "No pudimos crear la cuenta. Revisá los datos y probá de nuevo.",
     );
   }
 
@@ -59,7 +61,7 @@ export function RegisterForm({ google }: { google: boolean }) {
       {google && (
         <>
           <Divider />
-          <GoogleButton callbackURL={DEFAULT_AFTER_LOGIN} />
+          <GoogleButton callbackURL={AFTER_SIGN_UP} />
         </>
       )}
 

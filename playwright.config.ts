@@ -5,6 +5,10 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
+  // El dev server compila cada ruta la primera vez: margen para eso.
+  expect: { timeout: 10_000 },
+  // Los registros pueden esperar al rate limit (ver e2e/helpers.ts).
+  timeout: 90_000,
   reporter: process.env.CI ? "github" : "list",
   use: { baseURL: process.env.BASE_URL ?? "http://localhost:3000", trace: "retain-on-failure" },
   projects: [

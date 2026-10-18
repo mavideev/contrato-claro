@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { authClient } from "@/lib/auth/client";
-import { DEFAULT_AFTER_LOGIN } from "@/lib/auth/redirect";
+import { AFTER_SIGN_UP } from "@/lib/auth/redirect";
 import { Button, Heading, Notice } from "./ui";
 
 export function VerifyNotice() {
@@ -12,7 +12,7 @@ export function VerifyNotice() {
 
   async function resend() {
     setState("sending");
-    const { error } = await authClient.sendVerificationEmail({ email, callbackURL: DEFAULT_AFTER_LOGIN });
+    const { error } = await authClient.sendVerificationEmail({ email, callbackURL: AFTER_SIGN_UP });
     setState(error ? "error" : "sent");
   }
 

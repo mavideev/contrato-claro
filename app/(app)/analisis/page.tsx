@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { MobileBrand, PanelShell } from "@/components/app/panel-shell";
 import { ButtonLink } from "@/components/ui/button";
@@ -40,8 +39,15 @@ export default function Page() {
 async function Analyses() {
   const user = await requireUser("/analisis");
   const rows = await scoped(user.id).analyses.list();
-  // Sin análisis, el primer paso es subir uno (spec 02).
-  if (rows.length === 0) redirect("/analisis/nuevo");
+  if (rows.length === 0) {
+    return (
+      <div className="flex flex-col items-start gap-4 rounded-[14px] border border-line-soft bg-surface p-6">
+        <p className="font-display text-[22px] font-semibold">Todavía no analizaste ningún contrato</p>
+        <p className="text-ink-2">Subí una foto, un PDF, un Word o el texto, y te mostramos los riesgos cláusula por cláusula.</p>
+        <ButtonLink href="/analisis/nuevo">Subir mi primer contrato</ButtonLink>
+      </div>
+    );
+  }
 
   const today = todayInBuenosAires();
   const cards = rows.map((a) => ({ id: a.id, ...analysisCard(a, today) }));

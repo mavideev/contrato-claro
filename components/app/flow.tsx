@@ -1,11 +1,32 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
-// Contenedor de las pantallas del flujo (sin navegación del panel, como en el prototipo).
+// Contenedor de las pantallas del flujo: sin la barra del panel (como en el
+// prototipo), pero con un encabezado para volver siempre a «Mis análisis».
 export function FlowPage({ children, wide = true }: { children: ReactNode; wide?: boolean }) {
   return (
-    <main className={`mx-auto flex min-h-screen w-full flex-col gap-4 px-5 pt-5 md:gap-6 md:px-14 md:py-12 ${wide ? "max-w-[1280px]" : "max-w-3xl"}`}>
+    <main className={`mx-auto flex min-h-screen w-full flex-col gap-4 px-5 pt-4 md:gap-6 md:px-14 md:py-10 ${wide ? "max-w-[1280px]" : "max-w-3xl"}`}>
+      <FlowHeader />
       {children}
     </main>
+  );
+}
+
+export function FlowHeader() {
+  return (
+    <header className="flex flex-wrap items-center justify-between gap-4">
+      <Link href="/analisis" className="font-display text-xl font-semibold text-ink no-underline md:text-2xl">
+        Contrato Claro
+      </Link>
+      <nav aria-label="Principal" className="flex items-center gap-4 text-[15px] font-semibold">
+        <Link href="/analisis" className="inline-flex min-h-11 items-center text-primary-hover">
+          Mis análisis
+        </Link>
+        <Link href="/cuenta" className="hidden min-h-11 items-center text-primary-hover md:inline-flex">
+          Cuenta
+        </Link>
+      </nav>
+    </header>
   );
 }
 
