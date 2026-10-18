@@ -1,0 +1,1 @@
+# Archivos estáticos (favicon, imágenes). El Dockerfile copia esta carpeta: tiene que existir aunque esté vacía.
