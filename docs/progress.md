@@ -4,6 +4,20 @@ Qué está hecho, qué falta y dónde está cada cosa. Se actualiza al cerrar ca
 
 Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 
+## Etapas del proyecto
+
+El plan completo está en el [documento base, §9](../documento-base-mvp-v0.2.md#9-plan-por-etapas). Cada etapa tiene su spec en `docs/specs/`.
+
+| Etapa | Qué incluye | Estado |
+|---|---|---|
+| 0. Base | repositorio, Docker, base de datos, cuentas, pantallas, webhook, subida a S3 | 🟡 casi terminada: falta CI. Despliegue documentado en [deploy.md](deploy.md) |
+| 1. Cuentas y pago | Mercado Pago real con webhook | ⏳ |
+| 2. Captura y extracción | foto, PDF, Word y texto → cláusulas | ⏳ |
+| 3. Informe de alquileres | checklist, semáforo, citas, PDF | ⏳ |
+| 4. Re-chequeo | huellas, comparación, certificado | ⏳ |
+| 5. Normativa (RAG) | normas versionadas y búsqueda | ⏳ |
+| 6. Cierre | revisión humana, calidad de fotos, decisión sobre la app | ⏳ |
+
 ## Etapa 0 — Base (rama `feat/etapa-0-base`)
 
 | Parte | Estado | Qué incluye | Commit |
@@ -14,8 +28,9 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 | 4a. Sistema visual y panel | ✅ | ver detalle abajo | `c95df7c` |
 | 4b. Flujo del análisis | ✅ | ver detalle abajo | `b8aa7a4` |
 | 4c. Navegación entre pantallas (correcciones de la prueba manual) | ✅ | encabezado en el flujo, panel vacío | `fb3a4c3` |
-| 5. Webhook de Mercado Pago, subida a S3 e Inngest | ✅ | ver detalle abajo | este commit |
-| 6. CI (GitHub Actions) y `render.yaml` | ⏳ | spec 00 | |
+| 5. Webhook de Mercado Pago, subida a S3 e Inngest | ✅ | ver detalle abajo | `56f7000` |
+| 6a. Guía de despliegue y migraciones en la imagen de producción | ✅ | [deploy.md](deploy.md); Render lo configura la usuaria | este commit |
+| 6b. CI (GitHub Actions) | ⏳ | spec 00 | |
 
 ### Parte 3 — Cuentas (spec 02)
 

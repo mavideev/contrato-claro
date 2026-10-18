@@ -1,5 +1,5 @@
 // Aplica las migraciones de db/migrations. Lo corre el servicio `setup` del
-// compose y, en Render, el preDeployCommand.
+// compose y, en producción, `node migrate.mjs` desde la imagen (ver docs/deploy.md).
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";

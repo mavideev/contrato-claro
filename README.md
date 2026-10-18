@@ -29,7 +29,7 @@ make up          # o: docker compose up --build -d
 
 **Base de datos:** el esquema está en `db/schema.ts`. Para cambiarlo: editar el esquema → `pnpm db:generate` → `make up` (el servicio `setup` aplica las migraciones).
 
-Otros comandos: `make down` (detiene), `make reset` (borra datos y vuelve a levantar), `make logs`, `make ps`, `make build-prod` (imagen de producción, la misma que usa Render).
+Otros comandos: `make down` (detiene), `make reset` (borra datos y vuelve a levantar), `make logs`, `make ps`, `make build-prod` (imagen de producción, la misma que usa Render; ver [docs/deploy.md](docs/deploy.md)).
 
 **Hot reload:** `make up` copia el código en la imagen; tras cambiar código, `make up` reconstruye. Para recarga en caliente usá `make dev`, que monta la carpeta. Si cambiás dependencias (`package.json`), volvé a correr `make dev` para reconstruir la imagen. En macOS, Docker Desktop necesita permiso para `Documentos` (Configuración del Sistema → Privacidad y seguridad → Archivos y carpetas → Docker).
 
@@ -41,7 +41,7 @@ Otros comandos: `make down` (detiene), `make reset` (borra datos y vuelve a leva
 
 ## Documentos
 
-- [Avance de la implementación](docs/progress.md)
+- [Avance de la implementación](docs/progress.md) · [Despliegue en Render](docs/deploy.md)
 - [Documento base del MVP v0.2](documento-base-mvp-v0.2.md)
 - Specs: [00 Arquitectura](docs/specs/00-architecture.md) · [01 Modelo de datos](docs/specs/01-data-model.md) · [02 Cuentas](docs/specs/02-auth.md) · [03 Pantallas](docs/specs/03-screens.md) · [04 Pagos](docs/specs/04-payments.md) · [05 Jobs y análisis](docs/specs/05-jobs-and-analysis.md)
 - [Decisión 0001 — Stack](docs/decisions/0001-stack.md) · [Preguntas abiertas](docs/open-questions.md)
