@@ -1,0 +1,76 @@
+# CI (spec 00): revisiones rápidas y, aparte, el entorno completo con Docker
+# Compose (el mismo de local) para los tests de integración y de navegador.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint y tipos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+
+  integration:
+    name: Tests con el entorno completo
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Levantar el entorno (base, S3, mails, migraciones, seed, app)
+        run: docker compose up -d --build
+      - name: Esperar a que la app responda
+        run: |
+          for i in $(seq 1 90); do
+            curl -sf http://localhost:3000/api/health && exit 0
+            sleep 2
+          done
+          docker compose ps
+          docker compose logs setup app
+          exit 1
+
+      - name: Tests unitarios y de integración (vitest)
+        run: pnpm test
+
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Tests de navegador (Playwright, 1280 y 390 px)
+        run: pnpm e2e
+        env:
+          CI: "true"
+
+      - name: Imagen de producción
+        run: docker build --target runner -t contrato-claro:prod .
+
+      - name: Logs del entorno si algo falló
+        if: failure()
+        run: docker compose logs --tail 200
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright
+          path: test-results/
+          retention-days: 7
