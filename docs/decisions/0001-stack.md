@@ -13,7 +13,7 @@ El documento base (§5) deja abiertos el hosting, la autenticación, la cola de 
 | Hosting de la app | Render, Web Service con runtime Docker | Vercel (serverless; límites de duración para análisis largos) |
 | Base | Postgres + pgvector (`pgvector/pgvector` local, Render Postgres en producción) | Supabase, Neon |
 | Autenticación | Better Auth (corre dentro de la app y guarda las tablas en nuestra base) | Supabase Auth, Auth.js, Clerk |
-| Archivos | S3: MinIO local, Cloudflare R2 en producción | Supabase Storage, AWS S3 |
+| Archivos | S3: RustFS local (MinIO dejó de publicar imágenes), Cloudflare R2 en producción | Supabase Storage, AWS S3 |
 | Jobs | Inngest (dev server en Docker, Inngest Cloud en producción) | BullMQ + Redis + worker |
 | ORM | Drizzle | Prisma |
 | Email | SMTP a Mailpit local, Resend en producción | Postmark |

@@ -28,7 +28,7 @@ Una sola app Next.js, sin microservicios. Los trabajos largos (extracción y an�
 |---|---|---|
 | App | target `dev` del Dockerfile, hot reload, `:3000` | Web Service, runtime Docker, target `runner` |
 | Postgres | `pgvector/pgvector:pg17` | Render Postgres (extensión `vector`) |
-| Archivos | MinIO (`:9000`, consola `:9001`) | Cloudflare R2 (API S3) |
+| Archivos | RustFS (`:9000`, consola `:9001/rustfs/console/`; MinIO ya no publica imágenes) | Cloudflare R2 (API S3) |
 | Jobs | `inngest dev` (`:8288`) | Inngest Cloud |
 | Email | Mailpit (`:8025`) | Resend |
 | Ver la base | Adminer (`:8080`, perfil `tools`) | consola de Render / cliente SQL |
