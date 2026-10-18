@@ -6,6 +6,15 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 
 **Para probar a mano:** [guia-de-prueba.md](guia-de-prueba.md), paso a paso.
 
+## Cómo retomar (última actualización: 18/10/2026)
+
+- **Dónde quedamos:** etapa 1 (pagos) terminada con el simulador, probada a mano por la usuaria y con tests en verde. Rama `feat/etapa-1-pagos`; la usuaria hace el PR y el merge a `main`.
+- **Para levantar el entorno:** `make dev` (los datos quedan guardados entre reinicios). App en http://localhost:3000, mails en http://localhost:8025.
+- **Próximos pasos, en orden:**
+  1. Si la usuaria ya tiene la cuenta de Mercado Pago Developers: cargar las credenciales de prueba, levantar un túnel para el webhook y probar el pago real con tarjetas de prueba (ver «Etapa 1» abajo).
+  2. Si no: arrancar la **etapa 2, captura y extracción** (subida real a S3 desde «Subir», lectura de PDF, Word, texto y fotos, y división en cláusulas). Spec: `docs/specs/05-jobs-and-analysis.md`.
+  3. Pendientes sueltos: borrar un análisis suelto, captcha, la función que borra archivos al borrar la cuenta y la pregunta abierta 2 (qué pasa si el análisis falla después de pagar).
+
 ## Etapas del proyecto
 
 El plan completo está en el [documento base, §9](../documento-base-mvp-v0.2.md#9-plan-por-etapas). Cada etapa tiene su spec en `docs/specs/`.
