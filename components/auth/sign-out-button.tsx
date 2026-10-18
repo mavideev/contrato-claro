@@ -1,19 +1,21 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/client";
 
 export function SignOutButton() {
   const router = useRouter();
   return (
-    <button
+    <Button
       type="button"
-      className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+      variant="ghost"
+      className="self-start"
       onClick={async () => {
         await authClient.signOut();
         router.push("/ingresar");
       }}
     >
       Cerrar sesión
-    </button>
+    </Button>
   );
 }

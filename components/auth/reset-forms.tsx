@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth/client";
-import { Button, Field, Notice } from "./ui";
+import { Button, Field, Heading, Notice } from "./ui";
 
 export function RequestResetForm() {
   const [pending, setPending] = useState(false);
@@ -25,7 +25,7 @@ export function RequestResetForm() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-2xl font-bold">Recuperar contraseña</h1>
+      <Heading>Recuperar contraseña</Heading>
       {sent ? (
         // Mismo mensaje exista o no la cuenta.
         <Notice tone="ok">Si hay una cuenta con ese email, te mandamos un link para elegir una contraseña nueva. Vence en 1 hora.</Notice>
@@ -41,7 +41,7 @@ export function RequestResetForm() {
           </form>
         </>
       )}
-      <Link href="/ingresar" className="text-center text-sm font-semibold text-primary">
+      <Link href="/ingresar" className="text-center text-sm font-bold text-primary-hover">
         Volver a ingresar
       </Link>
     </div>
@@ -58,9 +58,9 @@ export function NewPasswordForm() {
   if (!token || params.get("error")) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">El link no sirve</h1>
+        <Heading>El link no sirve</Heading>
         <Notice tone="error">Venció o ya se usó. Pedí uno nuevo.</Notice>
-        <Link href="/recuperar" className="text-center text-sm font-semibold text-primary">
+        <Link href="/recuperar" className="text-center text-sm font-bold text-primary-hover">
           Pedir otro link
         </Link>
       </div>
@@ -82,7 +82,7 @@ export function NewPasswordForm() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-2xl font-bold">Elegí una contraseña nueva</h1>
+      <Heading>Elegí una contraseña nueva</Heading>
       <p className="text-ink-2">Al cambiarla, se cierran las sesiones abiertas en otros dispositivos.</p>
       {error && <Notice tone="error">{error}</Notice>}
       <form onSubmit={onSubmit} className="flex flex-col gap-4">

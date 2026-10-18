@@ -2,7 +2,7 @@
 
 Webapp para analizar contratos de alquiler en Argentina: el usuario sube una foto, un PDF, un Word o el texto; la app detecta riesgos cláusula por cláusula y, el día de la firma, comprueba que la versión final no cambió. Nombre provisorio.
 
-> Estado: **etapa 0, parte 3** — entorno Docker, esquema de base con datos de ejemplo y cuentas (registro, ingreso, link mágico, recuperar contraseña). Detalle en [docs/progress.md](docs/progress.md).
+> Estado: **etapa 0, parte 4** — entorno Docker, base con datos de ejemplo, cuentas y pantallas del panel. Detalle en [docs/progress.md](docs/progress.md).
 
 ## Correr en local
 
@@ -25,13 +25,13 @@ make up          # o: docker compose up --build -d
 
 **Google (opcional):** cargá `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en `.env` (URI de redirección: `http://localhost:3000/api/auth/callback/google`) y volvé a levantar. Sin esas variables no aparece el botón.
 
-**Tests:** `pnpm test` (necesita `make up` corriendo: usa la base local).
+**Tests:** `pnpm test` (unitarios e integración; necesita `make up` corriendo: usa la base local) y `pnpm e2e` (Playwright contra http://localhost:3000, en 1280 y 390 px; la primera vez, `pnpm exec playwright install chromium`).
 
 **Base de datos:** el esquema está en `db/schema.ts`. Para cambiarlo: editar el esquema → `pnpm db:generate` → `make up` (el servicio `setup` aplica las migraciones).
 
 Otros comandos: `make down` (detiene), `make reset` (borra datos y vuelve a levantar), `make logs`, `make ps`, `make build-prod` (imagen de producción, la misma que usa Render).
 
-**Hot reload:** `make up` copia el código en la imagen; tras cambiar código, `make up` reconstruye. Para recarga en caliente usá `make dev`, que monta la carpeta. En macOS, Docker Desktop necesita permiso para `Documentos` (Configuración del Sistema → Privacidad y seguridad → Archivos y carpetas → Docker).
+**Hot reload:** `make up` copia el código en la imagen; tras cambiar código, `make up` reconstruye. Para recarga en caliente usá `make dev`, que monta la carpeta. Si cambiás dependencias (`package.json`), volvé a correr `make dev` para reconstruir la imagen. En macOS, Docker Desktop necesita permiso para `Documentos` (Configuración del Sistema → Privacidad y seguridad → Archivos y carpetas → Docker).
 
 **Sin Docker para la app:** `cp .env.example .env`, `docker compose up -d db storage mailpit setup inngest` y `pnpm install && pnpm dev`.
 

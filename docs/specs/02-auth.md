@@ -1,6 +1,6 @@
 # Spec 02 — Cuentas y autenticación
 
-**Estado:** implementado en la etapa 0, parte 3 (falta lo marcado como pendiente) · **Etapa:** 0 y 1 · **Fuente:** documento base §0.2 y §3, mockup «1 · Registro»
+**Estado:** implementado en la etapa 0, partes 3 y 4 (falta lo marcado como pendiente) · **Etapa:** 0 y 1 · **Fuente:** documento base §0.2 y §3, mockup «1 · Registro»
 
 ## Objetivo
 
@@ -36,8 +36,8 @@ Plantillas en español rioplatense y texto plano + HTML simple: verificación, l
 
 - Límite de intentos de ingreso y de envío de mails (rate limit de Better Auth en la base). ✅
 - Captcha (Turnstile) en registro y en envío de link: queda preparado detrás de una variable y se activa antes del lanzamiento. ⏳ pendiente
-- Los eventos `sign_in`, `sign_up`, `password_reset` y `account_deleted` se registran en `audit_log`. ✅ los tres primeros; `account_deleted` llega con `/cuenta`.
-- Borrar la cuenta (en `/cuenta`): pide confirmación, borra en cascada y encola el borrado de archivos. ⏳ pendiente (pantallas)
+- Los eventos `sign_in`, `sign_up`, `password_reset` y `account_deleted` se registran en `audit_log`. ✅
+- Borrar la cuenta (en `/cuenta`): pide confirmación, borra en cascada y encola el borrado de archivos (evento de Inngest `account/deleted` con las claves de S3; la función que los borra llega con la etapa 2). ✅
 
 ## Criterios de aceptación
 

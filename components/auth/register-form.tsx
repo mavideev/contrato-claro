@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth/client";
 import { DEFAULT_AFTER_LOGIN } from "@/lib/auth/redirect";
-import { Button, Divider, Field, GoogleButton, Notice } from "./ui";
+import { Button, Divider, Field, GoogleButton, Heading, Notice } from "./ui";
 
 export function RegisterForm({ google }: { google: boolean }) {
   const router = useRouter();
+  const deleted = useSearchParams().has("borrada");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,22 +35,16 @@ export function RegisterForm({ google }: { google: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <h1 className="text-2xl font-bold">Crear cuenta</h1>
-      <p className="text-ink-2">Necesitás una cuenta para subir tu contrato.</p>
+    <div className="flex flex-col gap-[18px]">
+      <Heading>Creá tu cuenta</Heading>
+      {deleted && <Notice tone="ok">Borramos tu cuenta y todos tus datos.</Notice>}
       {error && <Notice tone="error">{error}</Notice>}
 
-      {google && (
-        <>
-          <GoogleButton callbackURL={DEFAULT_AFTER_LOGIN} />
-          <Divider />
-        </>
-      )}
-
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Field label="Email" name="email" type="email" autoComplete="email" required />
+        <Field label="Email" name="email" type="email" autoComplete="email" placeholder="nombre@correo.com" required />
         <Field
-          label="Contraseña (mínimo 8 caracteres)"
+          label="Contraseña"
+          placeholder="Mínimo 8 caracteres"
           name="password"
           type="password"
           autoComplete="new-password"
@@ -61,15 +56,22 @@ export function RegisterForm({ google }: { google: boolean }) {
         </Button>
       </form>
 
-      <p className="text-xs leading-relaxed text-ink-3">
+      {google && (
+        <>
+          <Divider />
+          <GoogleButton callbackURL={DEFAULT_AFTER_LOGIN} />
+        </>
+      )}
+
+      <p className="text-[15px] text-ink-2">
+        ¿Ya tenés cuenta?{" "}
+        <Link href="/ingresar" className="font-bold text-primary-hover">
+          Iniciá sesión
+        </Link>
+      </p>
+      <p className="text-[13px] leading-normal text-ink-3">
         Guardamos tu contrato cifrado mientras tengas cuenta. Podés borrarlo cuando quieras. Al continuar aceptás los
         términos y la política de privacidad.
-      </p>
-      <p className="text-center text-sm text-ink-2">
-        ¿Ya tenés cuenta?{" "}
-        <Link href="/ingresar" className="font-semibold text-primary">
-          Ingresar
-        </Link>
       </p>
     </div>
   );

@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth/client";
 import { safeNext } from "@/lib/auth/redirect";
-import { Button, Divider, Field, GoogleButton, Notice } from "./ui";
+import { Button, Divider, Field, GoogleButton, Heading, Notice, TextLink } from "./ui";
 
 type Mode = "password" | "link";
 
@@ -58,11 +58,11 @@ export function LoginForm({ google }: { google: boolean }) {
   if (linkSentTo) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">Revisá tu email</h1>
+        <Heading>Revisá tu email</Heading>
         <p className="text-ink-2">
           Te mandamos un link a <strong>{linkSentTo}</strong>. Sirve una sola vez y vence en 15 minutos.
         </p>
-        <Button variant="secondary" onClick={() => setLinkSentTo(null)}>
+        <Button variant="ghost" onClick={() => setLinkSentTo(null)}>
           Usar otro email
         </Button>
       </div>
@@ -71,38 +71,28 @@ export function LoginForm({ google }: { google: boolean }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-2xl font-bold">Ingresar</h1>
+      <Heading>Iniciá sesión</Heading>
       {params.get("reset") && <Notice tone="ok">Listo, ya podés entrar con tu contraseña nueva.</Notice>}
       {error && <Notice tone="error">{error}</Notice>}
 
-      <form onSubmit={mode === "password" ? onPassword : onLink} className="flex flex-col gap-4">
+      <form onSubmit={mode === "password" ? onPassword : onLink} className="flex flex-col gap-[18px]">
         <Field
           label="Email"
           name="email"
           type="email"
           autoComplete="email"
+          placeholder="nombre@correo.com"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         {mode === "password" && (
-          <Field label="Contraseña" name="password" type="password" autoComplete="current-password" required />
+          <Field label="Contraseña" name="password" type="password" autoComplete="current-password" placeholder="Mínimo 8 caracteres" required />
         )}
         <Button type="submit" disabled={pending}>
           {mode === "password" ? "Ingresar" : "Recibir el link"}
         </Button>
       </form>
-
-      <button
-        type="button"
-        className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-        onClick={() => {
-          setMode(mode === "password" ? "link" : "password");
-          setError(null);
-        }}
-      >
-        {mode === "password" ? "Recibir un link por email" : "Ingresar con contraseña"}
-      </button>
 
       {google && (
         <>
@@ -111,14 +101,23 @@ export function LoginForm({ google }: { google: boolean }) {
         </>
       )}
 
-      <div className="flex flex-col gap-2 text-center text-sm text-ink-2">
-        <Link href="/recuperar" className="font-semibold text-primary">
+      <TextLink
+        onClick={() => {
+          setMode(mode === "password" ? "link" : "password");
+          setError(null);
+        }}
+      >
+        {mode === "password" ? "Recibir un link por email" : "Ingresar con contraseña"}
+      </TextLink>
+
+      <div className="flex flex-col gap-2 text-[15px] text-ink-2">
+        <Link href="/recuperar" className="font-bold text-primary-hover">
           ¿Olvidaste tu contraseña?
         </Link>
         <p>
-          ¿No tenés cuenta?{" "}
-          <Link href="/registro" className="font-semibold text-primary">
-            Crear cuenta
+          ¿Primera vez?{" "}
+          <Link href="/registro" className="font-bold text-primary-hover">
+            Creá tu cuenta
           </Link>
         </p>
       </div>

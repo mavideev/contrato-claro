@@ -1,6 +1,6 @@
 # Spec 03 — Pantallas y rutas
 
-**Estado:** borrador para validar · **Etapa:** 0 (versión estática), después cada etapa conecta datos reales
+**Estado:** en implementación (etapa 0, parte 4; ver [progress.md](../progress.md)) · **Etapa:** 0 (versión estática), después cada etapa conecta datos reales
 **Fuente:** prototipo https://claude.ai/artifact/GXnaigS8tcsATZxUN1mQ6P (7 pantallas desktop y 8 mobile), documento base §3, §4 y §6
 
 ## Objetivo

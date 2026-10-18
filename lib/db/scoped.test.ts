@@ -44,6 +44,12 @@ describe("scoped()", () => {
     expect(report?.findings.every((f) => clauseIds.has(f.clauseId))).toBe(true);
   });
 
+  it("el historial de pagos trae solo los del usuario, con su análisis", async () => {
+    const mine = await scoped(demoId).payments.list();
+    expect(mine.length).toBe(3);
+    expect(mine.every((r) => r.payment.userId === demoId && r.payment.analysisId === r.analysis.id)).toBe(true);
+  });
+
   it("exige userId", () => {
     expect(() => scoped("")).toThrow();
   });

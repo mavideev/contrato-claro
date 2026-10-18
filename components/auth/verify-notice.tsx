@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { authClient } from "@/lib/auth/client";
 import { DEFAULT_AFTER_LOGIN } from "@/lib/auth/redirect";
-import { Button, Notice } from "./ui";
+import { Button, Heading, Notice } from "./ui";
 
 export function VerifyNotice() {
   const email = useSearchParams().get("email") ?? "";
@@ -18,7 +18,7 @@ export function VerifyNotice() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">Revisá tu email</h1>
+      <Heading>Revisá tu email</Heading>
       <p className="text-ink-2">
         Te mandamos un mail{email ? (
           <>
@@ -30,11 +30,11 @@ export function VerifyNotice() {
       {state === "sent" && <Notice tone="ok">Te lo mandamos de nuevo.</Notice>}
       {state === "error" && <Notice tone="error">No pudimos reenviarlo. Esperá un minuto y probá de nuevo.</Notice>}
       {email && (
-        <Button variant="secondary" onClick={resend} disabled={state === "sending"}>
+        <Button variant="ghost" onClick={resend} disabled={state === "sending"}>
           Reenviar el mail
         </Button>
       )}
-      <Link href="/ingresar" className="text-center text-sm font-semibold text-primary">
+      <Link href="/ingresar" className="text-center text-sm font-bold text-primary-hover">
         Volver a ingresar
       </Link>
     </div>

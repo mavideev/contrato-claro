@@ -1,21 +1,39 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { SignOutButton } from "@/components/auth/sign-out-button";
+import { MobileBrand, PanelShell } from "@/components/app/panel-shell";
+import { ButtonLink } from "@/components/ui/button";
+import { Pill } from "@/components/ui/pill";
+import { STORAGE_NOTICE, Title } from "@/components/ui/typography";
+import { analysisCard } from "@/lib/analysis/presentation";
 import { requireUser } from "@/lib/auth/session";
 import { scoped } from "@/lib/db/scoped";
+import { todayInBuenosAires } from "@/lib/format";
 
-// Placeholder de la etapa 0 (parte 3): la pantalla «Mis análisis» llega con la parte de pantallas.
+// Prototipo 7 · Mis análisis / móvil 8.
 export const metadata: Metadata = { title: "Mis análisis · Contrato Claro" };
 
 export default function Page() {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-10">
-      <h1 className="text-3xl font-bold">Mis análisis</h1>
-      <Suspense fallback={<p className="text-ink-3">Cargando…</p>}>
+    <PanelShell current="analisis">
+      <MobileBrand>
+        <ButtonLink href="/analisis/nuevo" className="min-h-11 px-4">
+          + Nuevo
+        </ButtonLink>
+      </MobileBrand>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Title>Mis análisis</Title>
+        <div className="hidden md:block">
+          <ButtonLink href="/analisis/nuevo" className="min-h-[50px] px-6">
+            Nuevo análisis
+          </ButtonLink>
+        </div>
+      </div>
+      <Suspense fallback={<CardsSkeleton />}>
         <Analyses />
       </Suspense>
-    </main>
+      <p className="mt-auto pt-6 text-center text-xs leading-snug text-ink-3 md:text-left md:text-sm">{STORAGE_NOTICE}</p>
+    </PanelShell>
   );
 }
 
@@ -25,18 +43,56 @@ async function Analyses() {
   // Sin análisis, el primer paso es subir uno (spec 02).
   if (rows.length === 0) redirect("/analisis/nuevo");
 
+  const today = todayInBuenosAires();
+  const cards = rows.map((a) => ({ id: a.id, ...analysisCard(a, today) }));
+  // «Firma hoy» primero, como en el prototipo mobile.
+  cards.sort((a, b) => Number(b.highlight) - Number(a.highlight));
+
   return (
-    <>
-      <p className="text-ink-2">
-        Entraste como <strong>{user.email}</strong>. <SignOutButton />
-      </p>
-      <ul className="flex flex-col gap-2">
-        {rows.map((a) => (
-          <li key={a.id} className="rounded-xl border border-line-soft bg-surface px-4 py-3">
-            {a.propertyLabel ?? "Sin dirección"} · <span className="text-ink-3">{a.status}</span>
-          </li>
-        ))}
-      </ul>
-    </>
+    <ul className="flex flex-col gap-3.5">
+      {cards.map((c) => (
+        <li
+          key={c.id}
+          className={`flex flex-col gap-3 rounded-[14px] bg-surface p-4 md:flex-row md:flex-wrap md:items-center md:gap-4 md:px-6 md:py-5 ${
+            c.highlight ? "border-2 border-primary md:px-[23px] md:py-[19px]" : "border border-line-soft"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-2.5 md:flex-[1_1_260px]">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-base font-bold md:text-lg">{c.title}</h2>
+              <p className="text-[13px] text-ink-3 md:text-[15px]">{c.subtitle}</p>
+            </div>
+            <span className="md:hidden">
+              <Pill tone={c.pill.tone}>{c.pill.label}</Pill>
+            </span>
+          </div>
+          <span className="hidden md:inline">
+            <Pill tone={c.pill.tone}>{c.pill.label}</Pill>
+          </span>
+          <div className="flex gap-2 md:gap-3">
+            {c.actions.map((a) => (
+              <ButtonLink
+                key={a.href}
+                href={a.href}
+                variant={a.variant}
+                className={`flex-1 md:flex-none ${c.highlight ? "shadow-[0_0_0_6px_#D6ECEB]" : ""}`}
+              >
+                {a.label}
+              </ButtonLink>
+            ))}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CardsSkeleton() {
+  return (
+    <div aria-hidden className="flex animate-pulse flex-col gap-3.5">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="h-24 rounded-[14px] bg-line-soft" />
+      ))}
+    </div>
   );
 }
