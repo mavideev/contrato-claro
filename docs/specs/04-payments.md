@@ -34,8 +34,8 @@ Configurable por variable (`PRICE_ANALYSIS_ARS` y `PRICE_RECHECK_ARS`) hasta que
 ## Criterios de aceptación
 
 - Etapa 0:
-  - [ ] Una firma inválida responde 401.
-  - [ ] Si el mismo evento llega dos veces, se guarda una sola fila.
+  - [x] Una firma inválida responde 401.
+  - [x] Si el mismo evento llega dos veces, se guarda una sola fila.
 - Etapa 1:
   - [ ] Un pago aprobado en sandbox desbloquea el informe de ejemplo.
   - [ ] Si se recarga `/pago/retorno` antes del webhook, se ve «pendiente» y no se desbloquea nada.

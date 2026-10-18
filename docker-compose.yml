@@ -1,0 +1,106 @@
+# Entorno local completo. Uso: `docker compose up` (ver README).
+# Todas las imágenes son open source y con versión fija.
+name: contrato-claro
+
+x-app-env: &app-env
+  APP_URL: http://localhost:3000
+  DATABASE_URL: postgres://contratos:contratos@db:5432/contratos
+  BETTER_AUTH_SECRET: contrato-claro-local-secret-no-usar-en-produccion
+  S3_ENDPOINT: http://storage:9000
+  S3_PUBLIC_ENDPOINT: http://localhost:9000
+  S3_REGION: us-east-1
+  S3_BUCKET: contracts
+  S3_ACCESS_KEY_ID: contratos
+  S3_SECRET_ACCESS_KEY: contratos-local-secret
+  S3_FORCE_PATH_STYLE: "true"
+  EMAIL_FROM: Contrato Claro <hola@contratoclaro.local>
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  INNGEST_DEV: http://inngest:8288
+  # Webhook de Mercado Pago: valor local; en la etapa 1, el de la app de prueba.
+  MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-mp-webhook-secret-local}
+  MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
+  # Opcionales: se leen del archivo .env si existe.
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+services:
+  db:
+    image: pgvector/pgvector:0.8.7-pg17-trixie
+    environment:
+      POSTGRES_USER: contratos
+      POSTGRES_PASSWORD: contratos
+      POSTGRES_DB: contratos
+    ports: ["5432:5432"]
+    volumes: [db-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U contratos -d contratos"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  storage:
+    image: rustfs/rustfs:1.0.1
+    environment:
+      RUSTFS_ACCESS_KEY: contratos
+      RUSTFS_SECRET_KEY: contratos-local-secret
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports:
+      - "9000:9000" # API S3
+      - "9001:9001" # consola web
+    volumes: [storage-data:/data]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/health || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    ports:
+      - "8025:8025" # bandeja web
+      - "1025:1025" # SMTP
+
+  # One-shot: crea el bucket, aplica migraciones y carga datos de ejemplo.
+  setup:
+    build: { context: ., target: dev }
+    command: ["pnpm", "bootstrap"]
+    environment: *app-env
+    depends_on:
+      db: { condition: service_healthy }
+      storage: { condition: service_healthy }
+    restart: "no"
+
+  app:
+    build: { context: ., target: dev }
+    environment: *app-env
+    ports: ["3000:3000"]
+    depends_on:
+      setup: { condition: service_completed_successfully }
+      mailpit: { condition: service_started }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  inngest:
+    image: inngest/inngest:v1.45.1
+    command: ["inngest", "dev", "-u", "http://app:3000/api/inngest", "--no-discovery"]
+    ports: ["8288:8288"]
+    depends_on:
+      app: { condition: service_started }
+
+  adminer:
+    image: adminer:5.4.1-standalone
+    profiles: [tools]
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports: ["8080:8080"]
+    depends_on: [db]
+
+volumes:
+  db-data:
+  storage-data:

@@ -28,7 +28,7 @@ Una sola app Next.js, sin microservicios. Los trabajos largos (extracción y an�
 |---|---|---|
 | App | target `dev` del Dockerfile, hot reload, `:3000` | Web Service, runtime Docker, target `runner` |
 | Postgres | `pgvector/pgvector:pg17` | Render Postgres (extensión `vector`) |
-| Archivos | MinIO (`:9000`, consola `:9001`) | Cloudflare R2 (API S3) |
+| Archivos | RustFS (`:9000`, consola `:9001/rustfs/console/`; MinIO ya no publica imágenes) | Cloudflare R2 (API S3) |
 | Jobs | `inngest dev` (`:8288`) | Inngest Cloud |
 | Email | Mailpit (`:8025`) | Resend |
 | Ver la base | Adminer (`:8080`, perfil `tools`) | consola de Render / cliente SQL |
@@ -61,11 +61,11 @@ Ningún secreto va en el repositorio. `.env.example` solo trae valores locales q
 ## Criterios de aceptación (etapa 0)
 
 - [ ] `cp .env.example .env && docker compose up` levanta todo, sin otro requisito que Docker.
-- [ ] Todos los servicios quedan *healthy* y el servicio `migrate` termina con código 0.
-- [ ] `GET /api/health` responde `200 {"status":"ok","db":"ok"}`. Si la base no responde, devuelve 503.
-- [ ] `docker build --target runner .` produce la imagen de producción y arranca con `node server.js`.
+- [x] Todos los servicios quedan *healthy* y el servicio `migrate` termina con código 0.
+- [x] `GET /api/health` responde `200 {"status":"ok","db":"ok"}`. Si la base no responde, devuelve 503.
+- [x] `docker build --target runner .` produce la imagen de producción y arranca con `node server.js`.
 - [ ] CI: lint, typecheck, unit tests, build de la imagen y Playwright smoke contra el compose.
-- [ ] `render.yaml` describe el Web Service y la base. El primer despliegue responde a `/api/health`.
+- [ ] El primer despliegue en Render responde a `/api/health`. (Sin `render.yaml`: Render se configura a mano siguiendo [deploy.md](../deploy.md).)
 
 ## Fuera de alcance
 

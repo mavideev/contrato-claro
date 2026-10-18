@@ -1,0 +1,10 @@
+# Hot reload: monta el código en el contenedor de la app.
+# Uso: `make dev`. En macOS, Docker Desktop necesita permiso para la carpeta
+# del proyecto (Configuración del Sistema → Privacidad y seguridad →
+# Archivos y carpetas → Docker → Documentos).
+services:
+  app:
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next

@@ -68,7 +68,7 @@ Un usuario demo (`demo@contratoclaro.local` / `demo12345`, verificado) con un an
 
 ## Criterios de aceptación
 
-- [ ] `drizzle-kit migrate` sobre una base vacía crea todas las tablas y la extensión `vector`.
-- [ ] El seed es idempotente: se puede correr dos veces sin errores.
+- [x] `drizzle-kit migrate` sobre una base vacía crea todas las tablas y la extensión `vector`.
+- [x] El seed es idempotente: se puede correr dos veces sin errores.
 - [ ] Borrar un `user` borra en cascada sus análisis, documentos, cláusulas, hallazgos, pagos y re-chequeos.
-- [ ] Un test comprueba que `scoped(userB).analyses.get(idDeA)` devuelve `null`.
+- [x] Un test comprueba que `scoped(userB).analyses.get(idDeA)` devuelve `null`.

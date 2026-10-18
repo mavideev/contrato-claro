@@ -43,8 +43,8 @@ Cada paso de IA usa `step.run` para que un reintento no repita pasos que ya term
 ## Criterios de aceptación
 
 - Etapa 0:
-  - [ ] El panel de Inngest local muestra la app registrada.
-  - [ ] Enviar `test/hello` ejecuta la función y se ve el resultado.
+  - [x] El panel de Inngest local muestra la app registrada.
+  - [x] Enviar `test/hello` ejecuta la función y se ve el resultado.
 - Etapa 2:
   - [ ] Los contratos de muestra se convierten en cláusulas correctas según las métricas de `evals/`.
 - Etapa 3:

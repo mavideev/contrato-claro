@@ -21,3 +21,11 @@ test-results/
 .DS_Store
 *.log
 *.tsbuildinfo
+
+# Playwright
+/test-results/
+/playwright-report/
+/e2e/.auth/
+
+# Build
+/dist/
