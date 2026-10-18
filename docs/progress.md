@@ -4,6 +4,8 @@ Qué está hecho, qué falta y dónde está cada cosa. Se actualiza al cerrar ca
 
 Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 
+**Para probar a mano:** [guia-de-prueba.md](guia-de-prueba.md), paso a paso.
+
 ## Etapas del proyecto
 
 El plan completo está en el [documento base, §9](../documento-base-mvp-v0.2.md#9-plan-por-etapas). Cada etapa tiene su spec en `docs/specs/`.

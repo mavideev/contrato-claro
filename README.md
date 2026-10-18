@@ -2,7 +2,7 @@
 
 Webapp para analizar contratos de alquiler en Argentina: el usuario sube una foto, un PDF, un Word o el texto; la app detecta riesgos cláusula por cláusula y, el día de la firma, comprueba que la versión final no cambió. Nombre provisorio.
 
-> Estado: **etapa 0, parte 5** — entorno Docker, base con datos de ejemplo, cuentas y todas las pantallas del prototipo (con stubs donde todavía no hay extracción, análisis ni pagos), webhook de Mercado Pago (firma e idempotencia) y subida a S3 con URL firmada. Detalle en [docs/progress.md](docs/progress.md).
+> Estado: **etapa 1** (pagos con simulador) — entorno Docker, base con datos de ejemplo, cuentas y todas las pantallas del prototipo (con stubs donde todavía no hay extracción, análisis ni pagos), webhook de Mercado Pago (firma e idempotencia) y subida a S3 con URL firmada. Detalle en [docs/progress.md](docs/progress.md).
 
 ## Correr en local
 
@@ -41,7 +41,7 @@ Otros comandos: `make down` (detiene), `make reset` (borra datos y vuelve a leva
 
 ## Documentos
 
-- [Avance de la implementación](docs/progress.md) · [Despliegue en Render](docs/deploy.md)
+- [Avance de la implementación](docs/progress.md) · [Guía de prueba paso a paso](docs/guia-de-prueba.md) · [Despliegue en Render](docs/deploy.md)
 - [Documento base del MVP v0.2](documento-base-mvp-v0.2.md)
 - Specs: [00 Arquitectura](docs/specs/00-architecture.md) · [01 Modelo de datos](docs/specs/01-data-model.md) · [02 Cuentas](docs/specs/02-auth.md) · [03 Pantallas](docs/specs/03-screens.md) · [04 Pagos](docs/specs/04-payments.md) · [05 Jobs y análisis](docs/specs/05-jobs-and-analysis.md)
 - [Decisión 0001 — Stack](docs/decisions/0001-stack.md) · [Preguntas abiertas](docs/open-questions.md)
