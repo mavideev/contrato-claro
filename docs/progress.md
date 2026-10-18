@@ -10,7 +10,7 @@ El plan completo está en el [documento base, §9](../documento-base-mvp-v0.2.md
 
 | Etapa | Qué incluye | Estado |
 |---|---|---|
-| 0. Base | repositorio, Docker, base de datos, cuentas, pantallas, webhook, subida a S3 | 🟡 casi terminada: falta CI. Despliegue documentado en [deploy.md](deploy.md) |
+| 0. Base | repositorio, Docker, base de datos, cuentas, pantallas, webhook, subida a S3, CI | 🟡 falta ver la CI en verde en GitHub y el primer despliegue en Render ([deploy.md](deploy.md)) |
 | 1. Cuentas y pago | Mercado Pago real con webhook | ⏳ |
 | 2. Captura y extracción | foto, PDF, Word y texto → cláusulas | ⏳ |
 | 3. Informe de alquileres | checklist, semáforo, citas, PDF | ⏳ |
@@ -29,8 +29,8 @@ El plan completo está en el [documento base, §9](../documento-base-mvp-v0.2.md
 | 4b. Flujo del análisis | ✅ | ver detalle abajo | `b8aa7a4` |
 | 4c. Navegación entre pantallas (correcciones de la prueba manual) | ✅ | encabezado en el flujo, panel vacío | `fb3a4c3` |
 | 5. Webhook de Mercado Pago, subida a S3 e Inngest | ✅ | ver detalle abajo | `56f7000` |
-| 6a. Guía de despliegue y migraciones en la imagen de producción | ✅ | [deploy.md](deploy.md); Render lo configura la usuaria | este commit |
-| 6b. CI (GitHub Actions) | ⏳ | spec 00 | |
+| 6a. Guía de despliegue y migraciones en la imagen de producción | ✅ | [deploy.md](deploy.md); Render lo configura la usuaria | `6dfe00e` |
+| 6b. CI (GitHub Actions) | 🟡 | `.github/workflows/ci.yml`: lint, tipos, vitest, Playwright y la imagen de producción. Probado en un clon limpio; falta verlo correr en GitHub | rama `feat/etapa-0-ci` |
 
 ### Parte 3 — Cuentas (spec 02)
 
@@ -110,6 +110,11 @@ Etapa 0: las pantallas son las reales y navegan como el prototipo, pero detrás 
 | Usar la subida firmada desde la pantalla «Subir» | ⏳ | etapa 2 (con la extracción) |
 
 **Tests:** `lib/payments/mercadopago.test.ts`, `app/api/webhooks/mercadopago/route.test.ts`, `lib/storage/upload.test.ts` (sube un PDF de prueba a RustFS y lo borra).
+
+### Parte 6b — CI (spec 00)
+
+- Dos trabajos: **Lint y tipos** (rápido) y **Tests con el entorno completo** (levanta el mismo `docker compose` que en local, corre vitest y Playwright y construye la imagen de producción).
+- Se probó replicando GitHub: clon limpio, base vacía. Así apareció un error real: la carpeta `public/` no estaba en git y la imagen de producción no se construía (a Render le habría pasado igual). Corregido.
 
 ## Pendientes que no son de una parte
 
