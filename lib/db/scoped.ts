@@ -107,6 +107,14 @@ export function scoped(userId: string, db: Db = defaultDb()) {
           .where(eq(payments.userId, userId))
           .orderBy(desc(payments.createdAt));
       },
+      async get(paymentId: string) {
+        if (!UUID.test(paymentId)) return null;
+        const [row] = await db.select().from(payments).where(and(eq(payments.id, paymentId), eq(payments.userId, userId))).limit(1);
+        return row ?? null;
+      },
+      async setPreference(paymentId: string, mpPreferenceId: string) {
+        await db.update(payments).set({ mpPreferenceId }).where(and(eq(payments.id, paymentId), eq(payments.userId, userId)));
+      },
       /** Último pago de un tipo para un análisis del usuario. */
       async latest(analysisId: string, kind: PaymentKind) {
         if (!(await getAnalysis(analysisId))) return null;

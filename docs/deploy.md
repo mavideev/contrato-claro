@@ -102,7 +102,9 @@ Se cargan en Render → Environment. Ninguna va en el repositorio. La validació
 | `RESEND_API_KEY` | sí | API key de Resend |
 | `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` | sí | de Inngest Cloud |
 | `MP_WEBHOOK_SECRET` | sí (si se configura el webhook) | «Clave secreta» del webhook en Mercado Pago Developers. Sin ella el webhook responde 401 a todo. |
-| `MP_ACCESS_TOKEN` | etapa 1 | token de la app de Mercado Pago (primero el de prueba) |
+| `MP_ACCESS_TOKEN` | sí, para cobrar | token de la app de Mercado Pago (primero el de prueba). ⚠️ Sin él, «Pagar» falla: el simulador de pagos está prohibido en producción. |
+| `PRICE_ANALYSIS_ARS` / `PRICE_RECHECK_ARS` | sí, para cobrar | precios en pesos, enteros. Con 0 (default) se muestra [PRECIO] y Mercado Pago no acepta el cobro. |
+| `PAYMENTS_PROVIDER` | no | no definir en producción (`mock` está prohibido) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | no | si están las dos aparece «Continuar con Google» |
 | `ANTHROPIC_API_KEY` | etapa 2 | todavía no se usa |
 
@@ -113,7 +115,7 @@ No hace falta definir `NODE_ENV`, `PORT` ni `HOSTNAME`: los fija la imagen. No d
 Una vez que la app tiene su URL:
 
 - **Google OAuth** (opcional): en Google Cloud Console → Credenciales → «URI de redireccionamiento autorizados»: `https://TU-DOMINIO/api/auth/callback/google`. ⚠️ El login con Google todavía no se probó con credenciales reales.
-- **Mercado Pago:** en Mercado Pago Developers → tu app → Webhooks: URL `https://TU-DOMINIO/api/webhooks/mercadopago`, evento «Pagos». Copiar la clave secreta a `MP_WEBHOOK_SECRET`. Hoy el webhook verifica la firma, guarda el evento y responde **501** (procesar el pago es la etapa 1); Mercado Pago lo va a reintentar, y no pasa nada porque los repetidos se ignoran.
+- **Mercado Pago:** en Mercado Pago Developers → tu app → Webhooks: URL `https://TU-DOMINIO/api/webhooks/mercadopago`, evento «Pagos». Copiar la clave secreta a `MP_WEBHOOK_SECRET`. El webhook verifica la firma, guarda el evento, consulta el pago a Mercado Pago y, si está aprobado, desbloquea el análisis. Si algo falla responde 500 y Mercado Pago reintenta.
 - **Inngest:** Sync app (paso 5).
 
 ## 9. Verificación después del primer deploy
@@ -131,7 +133,8 @@ Una vez que la app tiene su URL:
 
 Nada de esto bloquea publicar una demo, pero sí recibir usuarios:
 
-- [ ] Etapas 1 a 4: cobro real con Mercado Pago, extracción, análisis e informe. Hoy son simulados.
+- [ ] Cobro con Mercado Pago probado con credenciales de prueba y después reales (hoy probado con el simulador).
+- [ ] Etapas 2 a 4: extracción, análisis e informe reales. Hoy el informe es de ejemplo.
 - [ ] Postgres en plan pago y región de los datos revisada con el abogado ([preguntas abiertas](open-questions.md)).
 - [ ] Captcha (Turnstile) en registro y envío de links (spec 02).
 - [ ] Verificar la IP detrás del proxy (paso 9.6).

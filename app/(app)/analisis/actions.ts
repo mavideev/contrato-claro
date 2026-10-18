@@ -3,15 +3,17 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FIELDS } from "@/lib/analysis/fields";
 import { SAMPLE_FIELDS, SAMPLE_PREVIEW } from "@/lib/analysis/sample";
-import { requireUser } from "@/lib/auth/session";
+import { requireUser, type CurrentUser } from "@/lib/auth/session";
 import { scoped } from "@/lib/db/scoped";
+import { env } from "@/lib/env";
+import { paymentProvider, priceCents } from "@/lib/payments/provider";
 
 // Acciones del flujo del análisis (spec 03). Cada una valida la sesión y pasa
 // por scoped(), así que solo toca datos del usuario.
 //
-// Etapa 0: no hay extracción, análisis ni Mercado Pago todavía. Subir crea el
-// análisis con datos de ejemplo y pagar deja el pago en `pending`. El archivo
-// no viaja en la acción: en la etapa 2 se sube directo a S3 con URL firmada.
+// Todavía no hay extracción (etapa 2): subir crea el análisis con datos de
+// ejemplo. El archivo no viaja en la acción: en la etapa 2 se sube directo a
+// S3 con URL firmada. Pagar va a Mercado Pago (o al simulador, sin credenciales).
 
 export type FormState = { error?: string };
 
@@ -59,17 +61,31 @@ export async function confirmAnalysis(id: string, _: FormState, form: FormData):
 
 export async function startPayment(id: string): Promise<void> {
   const user = await requireUser(`/analisis/${id}/estado`);
-  // Precio: [PRECIO] hasta que se defina (spec 04); se guarda 0.
-  const payment = await scoped(user.id).payments.start(id, "analysis", 0);
-  if (!payment) redirect("/analisis");
-  redirect(`/pago/retorno?analisis=${id}`);
+  await checkout(user, id, "analysis");
 }
 
 export async function startRecheckPayment(id: string): Promise<void> {
   const user = await requireUser(`/analisis/${id}/rechequeo`);
-  const payment = await scoped(user.id).payments.start(id, "recheck", 0);
+  await checkout(user, id, "recheck");
+}
+
+// Spec 04, pasos 2 y 3: pago `pending` + preferencia, y a pagar.
+async function checkout(user: CurrentUser, analysisId: string, kind: "analysis" | "recheck") {
+  const db = scoped(user.id);
+  const payment = await db.payments.start(analysisId, kind, priceCents(kind));
   if (!payment) redirect("/analisis");
-  redirect(`/pago/retorno?analisis=${id}&tipo=rechequeo`);
+  const returnPath = `/pago/retorno?analisis=${analysisId}${kind === "recheck" ? "&tipo=rechequeo" : ""}`;
+  if (payment.status === "approved") redirect(returnPath);
+
+  const { redirectUrl, preferenceId } = await paymentProvider().createCheckout({
+    paymentId: payment.id,
+    title: kind === "analysis" ? "Análisis de contrato de alquiler" : "Re-chequeo del día de la firma",
+    amountCents: payment.amountCents,
+    payerEmail: user.email,
+    returnUrl: `${env().APP_URL}${returnPath}`,
+  });
+  if (preferenceId) await db.payments.setPreference(payment.id, preferenceId);
+  redirect(redirectUrl);
 }
 
 export async function createRecheck(id: string): Promise<void> {

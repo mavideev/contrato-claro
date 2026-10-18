@@ -20,6 +20,8 @@ x-app-env: &app-env
   # Webhook de Mercado Pago: valor local; en la etapa 1, el de la app de prueba.
   MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-mp-webhook-secret-local}
   MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
+  PRICE_ANALYSIS_ARS: ${PRICE_ANALYSIS_ARS:-0}
+  PRICE_RECHECK_ARS: ${PRICE_RECHECK_ARS:-0}
   # Opcionales: se leen del archivo .env si existe.
   GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
   GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}

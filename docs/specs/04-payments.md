@@ -1,6 +1,6 @@
 # Spec 04 — Pagos con Mercado Pago
 
-**Estado:** borrador para validar · **Etapa:** 1 (en la etapa 0 solo el stub del webhook) · **Fuente:** documento base §0.4, §6 y §12
+**Estado:** etapa 1 implementada con simulador; falta probar con Mercado Pago (ver [progress.md](../progress.md)) · **Etapa:** 1 (en la etapa 0 solo el stub del webhook) · **Fuente:** documento base §0.4, §6 y §12
 
 ## Objetivo
 
@@ -23,6 +23,10 @@ Cobrar un pago único por análisis y otro por re-chequeo con Checkout Pro. El i
 
 `pending → approved | rejected | cancelled`; `approved → refunded` (manual por ahora).
 
+## Simulador (desarrollo)
+
+Sin `MP_ACCESS_TOKEN`, el checkout es `/pago/simulador`: elige aprobado, pendiente o rechazado y manda al webhook el mismo aviso firmado. Está prohibido en producción (`lib/payments/provider.ts`).
+
 ## Precio
 
 Configurable por variable (`PRICE_ANALYSIS_ARS` y `PRICE_RECHECK_ARS`) hasta que se mida el costo real. En la interfaz aparece `[PRECIO]` mientras no esté definido.
@@ -37,10 +41,10 @@ Configurable por variable (`PRICE_ANALYSIS_ARS` y `PRICE_RECHECK_ARS`) hasta que
   - [x] Una firma inválida responde 401.
   - [x] Si el mismo evento llega dos veces, se guarda una sola fila.
 - Etapa 1:
-  - [ ] Un pago aprobado en sandbox desbloquea el informe de ejemplo.
-  - [ ] Si se recarga `/pago/retorno` antes del webhook, se ve «pendiente» y no se desbloquea nada.
-  - [ ] Un pago rechazado deja el análisis en `preview_ready` y permite reintentar.
-  - [ ] Un test simula el webhook con el SDK mockeado.
+  - [ ] Un pago aprobado en sandbox desbloquea el informe de ejemplo. (✅ con el simulador; falta con Mercado Pago)
+  - [x] Si se recarga `/pago/retorno` antes del webhook, se ve «pendiente» y no se desbloquea nada.
+  - [x] Un pago rechazado deja el análisis en `preview_ready` y permite reintentar.
+  - [x] Un test simula el webhook con la API de Mercado Pago mockeada (se usa la API REST, sin SDK).
 
 ## Fuera de alcance
 

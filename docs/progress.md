@@ -10,8 +10,8 @@ El plan completo está en el [documento base, §9](../documento-base-mvp-v0.2.md
 
 | Etapa | Qué incluye | Estado |
 |---|---|---|
-| 0. Base | repositorio, Docker, base de datos, cuentas, pantallas, webhook, subida a S3, CI | 🟡 falta ver la CI en verde en GitHub y el primer despliegue en Render ([deploy.md](deploy.md)) |
-| 1. Cuentas y pago | Mercado Pago real con webhook | ⏳ |
+| 0. Base | repositorio, Docker, base de datos, cuentas, pantallas, webhook, subida a S3, CI | ✅ (falta el primer despliegue en Render, ver [deploy.md](deploy.md)) |
+| 1. Cuentas y pago | Mercado Pago real con webhook | 🟡 todo funciona con el simulador; falta probar con la cuenta de Mercado Pago |
 | 2. Captura y extracción | foto, PDF, Word y texto → cláusulas | ⏳ |
 | 3. Informe de alquileres | checklist, semáforo, citas, PDF | ⏳ |
 | 4. Re-chequeo | huellas, comparación, certificado | ⏳ |
@@ -30,7 +30,7 @@ El plan completo está en el [documento base, §9](../documento-base-mvp-v0.2.md
 | 4c. Navegación entre pantallas (correcciones de la prueba manual) | ✅ | encabezado en el flujo, panel vacío | `fb3a4c3` |
 | 5. Webhook de Mercado Pago, subida a S3 e Inngest | ✅ | ver detalle abajo | `56f7000` |
 | 6a. Guía de despliegue y migraciones en la imagen de producción | ✅ | [deploy.md](deploy.md); Render lo configura la usuaria | `6dfe00e` |
-| 6b. CI (GitHub Actions) | 🟡 | `.github/workflows/ci.yml`: lint, tipos, vitest, Playwright y la imagen de producción. Probado en un clon limpio; falta verlo correr en GitHub | rama `feat/etapa-0-ci` |
+| 6b. CI (GitHub Actions) | ✅ | `.github/workflows/ci.yml`: lint, tipos, vitest, Playwright y la imagen de producción (~4 min) | `55b67b0` |
 
 ### Parte 3 — Cuentas (spec 02)
 
@@ -115,6 +115,30 @@ Etapa 0: las pantallas son las reales y navegan como el prototipo, pero detrás 
 
 - Dos trabajos: **Lint y tipos** (rápido) y **Tests con el entorno completo** (levanta el mismo `docker compose` que en local, corre vitest y Playwright y construye la imagen de producción).
 - Se probó replicando GitHub: clon limpio, base vacía. Así apareció un error real: la carpeta `public/` no estaba en git y la imagen de producción no se construía (a Render le habría pasado igual). Corregido.
+
+## Etapa 1 — Pagos (rama `feat/etapa-1-pagos`)
+
+Mientras no hay cuenta de Mercado Pago, los pagos pasan por un **simulador**: «Pagar» lleva a una pantalla de prueba con «Aprobar», «Dejarlo pendiente» y «Rechazarlo». El simulador manda el mismo aviso firmado que mandaría Mercado Pago, así que el resto del circuito es el real.
+
+| Qué | Estado | Dónde |
+|---|---|---|
+| Proveedor de pagos intercambiable: simulador o Mercado Pago (según `MP_ACCESS_TOKEN` / `PAYMENTS_PROVIDER`); el simulador está prohibido en producción | ✅ | `lib/payments/provider.ts` |
+| Simulador (pantalla y aviso firmado) | ✅ | `/pago/simulador`, `lib/payments/mock.ts` |
+| Mercado Pago real: crear preferencia (Checkout Pro) y leer el pago por API REST | 🟡 escrito y probado con la API simulada; falta probar con credenciales de prueba | `lib/payments/mercadopago-api.ts` |
+| Webhook: firma, idempotencia, consulta del pago real, reintento si falla (500) | ✅ | `lib/payments/webhook.ts`, `lib/payments/process.ts` |
+| Protecciones: un aviso viejo no deshace una aprobación; si el monto no coincide, no se aprueba | ✅ | `lib/payments/process.ts` |
+| Pago aprobado → análisis `paid` → job de Inngest `analysis/paid` → informe de ejemplo → `ready` | ✅ | `jobs/analysis-paid.ts`, `lib/analysis/sample-report.ts` |
+| Compra del re-chequeo con el mismo circuito | ✅ | |
+| `/pago/retorno` y el estado del análisis se actualizan solos mientras hay algo pendiente | ✅ | `components/app/auto-refresh.tsx` |
+| Precios por variable (`PRICE_ANALYSIS_ARS`, `PRICE_RECHECK_ARS`); sin definir se muestra [PRECIO] | ✅ | `lib/env.ts` |
+| Túnel para recibir webhooks de Mercado Pago en local | ⏳ | cuando haya credenciales |
+| Qué pasa si el análisis falla después de pagar (pregunta abierta 2) | ⏳ | |
+
+**Tests:** `lib/payments/providers.test.ts` (simulador y Mercado Pago con la API simulada) y `app/api/webhooks/mercadopago/route.test.ts` (aprobado, repetido, rechazado, aviso viejo, error y reintento, monto distinto). E2E: pagar en el simulador → informe → comprar el re-chequeo.
+
+**Para probarlo a mano:** cuenta nueva → subir → confirmar → «Pagar con Mercado Pago» → «Aprobar el pago» → «Ver mi informe» (tarda unos segundos).
+
+**Cuando llegue la cuenta de Mercado Pago:** cargar `MP_ACCESS_TOKEN` (de prueba), `MP_WEBHOOK_SECRET` y los precios en `.env`, levantar un túnel (Mercado Pago necesita una URL pública para el webhook) y repetir la prueba con las tarjetas de prueba.
 
 ## Pendientes que no son de una parte
 

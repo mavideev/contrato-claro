@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { startPayment } from "@/app/(app)/analisis/actions";
+import { AutoRefresh } from "@/components/app/auto-refresh";
 import { FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { ProgressSteps } from "@/components/app/progress-steps";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { RiskCounts } from "@/components/ui/pill";
 import { Kicker, Title } from "@/components/ui/typography";
 import { loadAnalysis } from "@/lib/analysis/load";
 import { formatPrice } from "@/lib/format";
+import { priceCents } from "@/lib/payments/provider";
 
 // Prototipo 4 · Análisis y pago / móvil 5. Corrección 2 de la spec 03: el
 // re-chequeo es un extra.
@@ -47,6 +49,7 @@ async function Status({ params }: Pick<PageProps<"/analisis/[id]/estado">, "para
           ) : (
             <>
               <ProgressSteps steps={steps} active={active} />
+              {(paid || status === "extracting") && <AutoRefresh />}
               {active < steps.length && <p className="text-[13px] text-ink-3 md:text-[15px]">No cierres esta pantalla. Suele tardar menos de un minuto.</p>}
             </>
           )}
@@ -65,7 +68,7 @@ async function Status({ params }: Pick<PageProps<"/analisis/[id]/estado">, "para
               ))}
             </div>
             {paid ? (
-              <p className="text-[15px] text-ok-fg md:text-base">Pago confirmado. Te avisamos por mail cuando el informe esté listo.</p>
+              <p className="text-[15px] text-ok-fg md:text-base">Pago confirmado. Estamos preparando tu informe: esta pantalla se actualiza sola.</p>
             ) : (
               <>
                 <p className="flex items-center gap-2 text-[15px] text-[#243B53] md:text-base">
@@ -76,7 +79,7 @@ async function Status({ params }: Pick<PageProps<"/analisis/[id]/estado">, "para
                   El detalle de cada cláusula se desbloquea al pagar.
                 </p>
                 <div className="flex items-baseline gap-2.5 md:gap-3">
-                  <span className="font-display text-[34px] font-bold md:text-[40px]">{formatPrice(payment?.amountCents ?? 0)}</span>
+                  <span className="font-display text-[34px] font-bold md:text-[40px]">{formatPrice(payment?.amountCents || priceCents("analysis"))}</span>
                   <span className="text-sm text-ink-3 md:text-[15px]">pago único</span>
                 </div>
                 <p className="text-[15px] leading-normal text-ink-2 md:text-base">

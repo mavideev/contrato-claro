@@ -40,6 +40,12 @@ const schema = z.object({
   // Mercado Pago (spec 04). Sin el secreto, el webhook rechaza todo.
   MP_ACCESS_TOKEN: optional,
   MP_WEBHOOK_SECRET: optional,
+  // `mock`: simulador local en lugar de Mercado Pago. Por defecto, Mercado
+  // Pago si hay MP_ACCESS_TOKEN y el simulador si no (nunca en producción).
+  PAYMENTS_PROVIDER: z.enum(["mock", "mercadopago"]).optional(),
+  // Precios en pesos (enteros). Sin definir, la interfaz muestra [PRECIO].
+  PRICE_ANALYSIS_ARS: z.coerce.number().int().nonnegative().default(0),
+  PRICE_RECHECK_ARS: z.coerce.number().int().nonnegative().default(0),
 
   INNGEST_DEV: optional,
   INNGEST_EVENT_KEY: optional,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { AutoRefresh } from "@/components/app/auto-refresh";
 import { FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { ButtonLink } from "@/components/ui/button";
 import { Title } from "@/components/ui/typography";
@@ -33,12 +34,12 @@ async function Result({ searchParams }: Pick<PageProps<"/pago/retorno">, "search
   const content = {
     approved: {
       title: "Pago aprobado",
-      text: recheck ? "Ya podés subir la versión que vas a firmar." : "Estamos preparando tu informe completo. Te avisamos por mail cuando esté listo.",
-      action: { href: back, label: recheck ? "Subir la versión final" : "Ver el estado" },
+      text: recheck ? "Ya podés subir la versión que vas a firmar." : "Estamos preparando tu informe completo. Suele tardar menos de un minuto.",
+      action: { href: back, label: recheck ? "Subir la versión final" : "Ver mi informe" },
     },
     pending: {
       title: "Tu pago está pendiente",
-      text: "Cuando Mercado Pago lo confirme, se desbloquea solo. Podés cerrar esta pantalla: te avisamos por mail.",
+      text: "Cuando Mercado Pago lo confirme, se desbloquea solo. Esta pantalla se actualiza sola.",
       action: { href: "/analisis", label: "Volver a Mis análisis" },
     },
     rejected: {
@@ -60,6 +61,7 @@ async function Result({ searchParams }: Pick<PageProps<"/pago/retorno">, "search
 
   return (
     <section className="flex flex-col gap-5 rounded-2xl border border-line-soft bg-surface p-6 md:mt-12 md:p-8">
+      {payment.status === "pending" && <AutoRefresh />}
       <Title>{content.title}</Title>
       <p className="text-ink-2">{content.text}</p>
       <ButtonLink href={content.action.href} className="self-start">

@@ -1,13 +1,14 @@
 // Datos de ejemplo para desarrollo local (spec 01, "Seed local").
 // Idempotente: si el usuario demo ya existe, no hace nada.
 // `make reset` borra la base y vuelve a sembrar desde cero.
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as s from "../db/schema";
 import { SAMPLE_FIELDS as FIELDS, SAMPLE_PREVIEW } from "../lib/analysis/sample";
+import { SAMPLE_CLAUSES as CLAUSES, writeSampleReport } from "../lib/analysis/sample-report";
 
 if (process.env.NODE_ENV === "production") throw new Error("El seed es solo para desarrollo");
 const url = process.env.DATABASE_URL;
@@ -19,7 +20,6 @@ const db = drizzle(client, { schema: s, casing: "snake_case" });
 export const DEMO = { email: "demo@contratoclaro.local", password: "demo12345", name: "Usuario Demo" };
 export const OTHER = { email: "otro@contratoclaro.local", password: "otro12345", name: "Otra Persona" };
 
-const sha256 = (t: string) => createHash("sha256").update(t).digest("hex");
 const today = () => new Date().toISOString().slice(0, 10);
 
 async function createUser(u: typeof DEMO) {
@@ -35,42 +35,6 @@ async function createUser(u: typeof DEMO) {
   return id;
 }
 
-// Contrato de ejemplo: 12 cláusulas; 3 con hallazgos (las del prototipo).
-const CLAUSES: { title: string; text: string }[] = [
-  { title: "Partes", text: "[Locador], DNI [número], y [Locatario], DNI [número], celebran el presente contrato de locación." },
-  { title: "Objeto", text: "El locador da en locación al locatario el inmueble ubicado en [Dirección y unidad], destinado exclusivamente a vivienda." },
-  { title: "Plazo", text: "El plazo de la locación es de 24 meses, contados desde la fecha de entrega de llaves." },
-  { title: "Ajuste", text: "El precio se actualizará trimestralmente según la variación del IPC publicada por el INDEC." },
-  { title: "Forma de pago", text: "El alquiler se paga por mes adelantado, del 1 al 10 de cada mes, mediante transferencia bancaria." },
-  { title: "Expensas", text: "Las expensas ordinarias están a cargo del locatario; las extraordinarias, a cargo del locador." },
-  { title: "Depósito", text: "El locatario entrega en este acto la suma equivalente a tres meses de alquiler en concepto de depósito en garantía." },
-  { title: "Garantía", text: "En garantía de las obligaciones asumidas, el locatario presenta seguro de caución [Aseguradora]." },
-  { title: "Rescisión", text: "El locatario podrá rescindir el contrato notificando con 90 días de anticipación." },
-  { title: "Mejoras", text: "Toda mejora requiere autorización escrita del locador y quedará a beneficio del inmueble." },
-  { title: "Valor inicial", text: "El alquiler mensual inicial es de $ 450.000 (pesos cuatrocientos cincuenta mil)." },
-  { title: "Domicilios", text: "Las partes constituyen domicilio en los indicados al inicio, donde serán válidas las notificaciones." },
-];
-
-const FINDINGS: Record<number, Omit<typeof s.findings.$inferInsert, "analysisId" | "clauseId">> = {
-  7: {
-    level: "high",
-    title: "Depósito de 3 meses sin plazo de devolución",
-    explanation: "No dice en cuántos días se devuelve ni con qué ajuste. Pedí que quede por escrito.",
-    whatToAsk: "Pedí que se agregue el plazo de devolución en días y cómo se actualiza el monto al momento de devolverlo.",
-  },
-  4: {
-    level: "attention",
-    title: "Ajuste trimestral por IPC",
-    explanation: "Confirmá la fuente del índice y desde qué fecha rige el primer ajuste.",
-    whatToAsk: "Preguntá desde qué mes se aplica el primer ajuste y qué índice se usa si el IPC deja de publicarse.",
-  },
-  9: {
-    level: "attention",
-    title: "Preaviso de 90 días para el inquilino",
-    explanation: "Revisá si hay penalidad y desde qué mes se puede rescindir.",
-    whatToAsk: "Buscá si hay una penalidad en meses de alquiler por rescindir antes de tiempo y desde qué mes podés hacerlo.",
-  },
-};
 
 
 async function createReadyAnalysis(userId: string, opts: { signingDate?: string; createdAt: Date; label: string }) {
@@ -88,23 +52,7 @@ async function createReadyAnalysis(userId: string, opts: { signingDate?: string;
     })
     .returning();
 
-  const inserted = await db
-    .insert(s.clauses)
-    .values(CLAUSES.map((c, i) => ({ analysisId: a.id, number: i + 1, title: c.title, text: c.text, sha256: sha256(c.text) })))
-    .returning();
-
-  await db.insert(s.findings).values(
-    inserted
-      .filter((c) => FINDINGS[c.number])
-      .map((c) => ({ ...FINDINGS[c.number], analysisId: a.id, clauseId: c.id })),
-  );
-
-  await db.insert(s.fingerprints).values({
-    analysisId: a.id,
-    fileSha256: sha256(`archivo-${a.id}`),
-    normalizedTextSha256: sha256(CLAUSES.map((c) => c.text).join("\n")),
-    clauseHashes: Object.fromEntries(inserted.map((c) => [c.number, c.sha256])),
-  });
+  await writeSampleReport(db, a.id);
 
   await db.insert(s.payments).values({
     userId,

@@ -57,6 +57,9 @@ test.describe("con un usuario nuevo", () => {
     ).toBeVisible();
     await page.getByRole("button", { name: "Pagar con Mercado Pago" }).click();
 
+    // Sin credenciales de Mercado Pago, el checkout es el simulador.
+    await expect(page).toHaveURL(/\/pago\/simulador\?pago=/);
+    await page.getByRole("button", { name: "Dejarlo pendiente" }).click();
     await expect(page).toHaveURL(/\/pago\/retorno\?analisis=/);
     await expect(
       page.getByRole("heading", { name: "Tu pago está pendiente" }),
@@ -67,6 +70,35 @@ test.describe("con un usuario nuevo", () => {
       page.getByText("Alquiler de vivienda · Av. Corrientes 1234, 5° B"),
     ).toBeVisible();
     await expect(page.getByText("Pago pendiente").filter({ visible: true })).toBeVisible();
+    await deleteAccount(page);
+  });
+
+  test("pagar en el simulador desbloquea el informe y el re-chequeo (etapa 1)", async ({ page, request }, info) => {
+    test.skip(info.project.name !== "desktop", "un solo recorrido alcanza");
+    await signUpAndVerify(page, request);
+    await page.getByRole("button", { name: "Pegar texto" }).click();
+    await page.getByLabel("Texto del contrato").fill("Contrato de locación de prueba.");
+    await page.getByRole("button", { name: "Analizar contrato" }).click();
+    await page.getByRole("button", { name: "Confirmar y analizar" }).click();
+    await page.getByRole("button", { name: "Pagar con Mercado Pago" }).click();
+
+    await page.getByRole("button", { name: "Aprobar el pago" }).click();
+    await expect(page.getByRole("heading", { name: "Pago aprobado" })).toBeVisible();
+    await page.getByRole("link", { name: "Ver mi informe" }).click();
+
+    // El job de Inngest escribe el informe de ejemplo; la pantalla se actualiza sola.
+    await expect(page).toHaveURL(/\/informe$/, { timeout: 60_000 });
+    await expect(page.getByText("9 cláusulas sin alertas")).toBeVisible();
+
+    await page.getByRole("link", { name: "Re-chequear el día de la firma" }).click();
+    await page.getByRole("button", { name: "Pagar con Mercado Pago" }).click();
+    await page.getByRole("button", { name: "Aprobar el pago" }).click();
+    await expect(page.getByRole("heading", { name: "Pago aprobado" })).toBeVisible();
+    await page.getByRole("link", { name: "Subir la versión final" }).click();
+    await expect(page.getByText("Podés sacarle fotos desde el celular o subir el PDF o Word.")).toBeVisible();
+
+    await page.goto("/pagos");
+    await expect(page.getByText("Aprobado")).toHaveCount(2);
     await deleteAccount(page);
   });
 

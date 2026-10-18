@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth/session";
 import { scoped } from "@/lib/db/scoped";
 import { wordDiff } from "@/lib/diff";
 import { formatDay, formatDayTime, formatPrice } from "@/lib/format";
+import { priceCents } from "@/lib/payments/provider";
 
 // Prototipo 6 · Re-chequeo / móvil 7. Corrección 6 de la spec 03: antes, la
 // compra del extra; después, la subida y el resultado (con «Todo idéntico»).
@@ -62,7 +63,7 @@ async function Recheck({ params }: Pick<PageProps<"/analisis/[id]/rechequeo">, "
         <section className="flex max-w-[560px] flex-col gap-4 rounded-2xl border border-line-soft bg-surface px-5 py-6 md:p-8">
           <Kicker>Re-chequeo</Kicker>
           <div className="flex items-baseline gap-3">
-            <span className="font-display text-[34px] font-bold md:text-[40px]">{formatPrice(payment?.amountCents ?? 0)}</span>
+            <span className="font-display text-[34px] font-bold md:text-[40px]">{formatPrice(payment?.amountCents || priceCents("recheck"))}</span>
             <span className="text-[15px] text-ink-3">pago único</span>
           </div>
           <p className="text-[15px] leading-normal text-ink-2 md:text-base">
