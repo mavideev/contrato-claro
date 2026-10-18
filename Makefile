@@ -10,7 +10,7 @@ up: ## Levanta todo el entorno local
 	@echo "  Inngest ........ http://localhost:8288"
 
 dev: ## Igual que up, con hot reload (monta el código; ver docker-compose.dev.yml)
-	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d --renew-anon-volumes
 
 down: ## Detiene los contenedores (conserva los datos)
 	docker compose down

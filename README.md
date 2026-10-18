@@ -2,7 +2,7 @@
 
 Webapp para analizar contratos de alquiler en Argentina: el usuario sube una foto, un PDF, un Word o el texto; la app detecta riesgos cláusula por cláusula y, el día de la firma, comprueba que la versión final no cambió. Nombre provisorio.
 
-> Estado: **etapa 0, parte 1** — entorno Docker, conexión a base y almacenamiento, jobs de prueba.
+> Estado: **etapa 0, parte 2** — entorno Docker, esquema de base con migraciones y datos de ejemplo.
 
 ## Correr en local
 
@@ -21,6 +21,12 @@ make up          # o: docker compose up --build -d
 | Jobs (Inngest) | http://localhost:8288 | en *Functions* aparece `hello`; se prueba enviando el evento `test/hello` |
 | Base (Adminer) | http://localhost:8080 | `make tools`; servidor `db`, usuario/clave/base `contratos` |
 
+**Usuarios de ejemplo** (los crea el seed): `demo@contratoclaro.local` / `demo12345` (3 análisis: informe listo, firma hoy, pago pendiente) y `otro@contratoclaro.local` / `otro12345` (para probar que nadie ve análisis ajenos).
+
+**Tests:** `pnpm test` (necesita `make up` corriendo: usa la base local).
+
+**Base de datos:** el esquema está en `db/schema.ts`. Para cambiarlo: editar el esquema → `pnpm db:generate` → `make up` (el servicio `setup` aplica las migraciones).
+
 Otros comandos: `make down` (detiene), `make reset` (borra datos y vuelve a levantar), `make logs`, `make ps`, `make build-prod` (imagen de producción, la misma que usa Render).
 
 **Hot reload:** `make up` copia el código en la imagen; tras cambiar código, `make up` reconstruye. Para recarga en caliente usá `make dev`, que monta la carpeta. En macOS, Docker Desktop necesita permiso para `Documentos` (Configuración del Sistema → Privacidad y seguridad → Archivos y carpetas → Docker).
@@ -29,7 +35,7 @@ Otros comandos: `make down` (detiene), `make reset` (borra datos y vuelve a leva
 
 ## Servicios (docker-compose.yml)
 
-`db` Postgres 17 + pgvector · `storage` RustFS (S3 compatible; MinIO dejó de publicar imágenes) · `mailpit` · `setup` (crea el bucket; luego migraciones y seed) · `app` Next.js · `inngest` dev server · `adminer` (perfil `tools`).
+`db` Postgres 17 + pgvector · `storage` RustFS (S3 compatible; MinIO dejó de publicar imágenes) · `mailpit` · `setup` (crea el bucket, aplica migraciones y carga el seed) · `app` Next.js · `inngest` dev server · `adminer` (perfil `tools`).
 
 ## Documentos
 

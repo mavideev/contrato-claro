@@ -58,10 +58,10 @@ services:
       - "8025:8025" # bandeja web
       - "1025:1025" # SMTP
 
-  # One-shot: crea el bucket (y desde la parte 2, corre migraciones y seed).
+  # One-shot: crea el bucket, aplica migraciones y carga datos de ejemplo.
   setup:
     build: { context: ., target: dev }
-    command: ["pnpm", "tsx", "scripts/setup-storage.ts"]
+    command: ["pnpm", "bootstrap"]
     environment: *app-env
     depends_on:
       db: { condition: service_healthy }
