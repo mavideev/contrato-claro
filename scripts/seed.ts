@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as s from "../db/schema";
+import { SAMPLE_FIELDS as FIELDS, SAMPLE_PREVIEW } from "../lib/analysis/sample";
 
 if (process.env.NODE_ENV === "production") throw new Error("El seed es solo para desarrollo");
 const url = process.env.DATABASE_URL;
@@ -71,20 +72,6 @@ const FINDINGS: Record<number, Omit<typeof s.findings.$inferInsert, "analysisId"
   },
 };
 
-const FIELDS: s.ConfirmedFields = {
-  landlord: "[Nombre completo]",
-  tenant: "[Nombre completo]",
-  property: "[Dirección y unidad]",
-  term: "24 meses",
-  initialRent: "$ 450.000",
-  adjustment: "Trimestral por IPC",
-  deposit: "3 meses",
-  guarantee: "Seguro de caución",
-  termination: "Preaviso de 90 días",
-  expenses: "Ordinarias a cargo del inquilino",
-  commission: "[Sin dato]",
-  currency: "ARS",
-};
 
 async function createReadyAnalysis(userId: string, opts: { signingDate?: string; createdAt: Date; label: string }) {
   const [a] = await db
@@ -96,7 +83,7 @@ async function createReadyAnalysis(userId: string, opts: { signingDate?: string;
       signingDate: opts.signingDate,
       checklistVersion: "rental-v1",
       confirmedFields: FIELDS,
-      preview: { high: 1, attention: 2, none: 9 },
+      preview: SAMPLE_PREVIEW,
       createdAt: opts.createdAt,
     })
     .returning();
@@ -139,10 +126,24 @@ async function main() {
 
   const demoId = await createUser(DEMO);
   await createReadyAnalysis(demoId, { label: "[Dirección] · Palermo", createdAt: new Date("2026-10-14T13:42:00Z") });
-  await createReadyAnalysis(demoId, {
+  const signsToday = await createReadyAnalysis(demoId, {
     label: "[Dirección] · Caballito",
     signingDate: today(),
     createdAt: new Date("2026-10-12T15:00:00Z"),
+  });
+  // Re-chequeo pagado con 2 cambios (prototipo 6 · Re-chequeo).
+  const [recheckPayment] = await db
+    .insert(s.payments)
+    .values({ userId: demoId, analysisId: signsToday.id, kind: "recheck", status: "approved", mpPaymentId: `seed-recheck-${signsToday.id}`, amountCents: 0 })
+    .returning();
+  await db.insert(s.rechecks).values({
+    analysisId: signsToday.id,
+    paymentId: recheckPayment.id,
+    result: "changed",
+    changes: [
+      { clauseNumber: 4, title: "Ajuste", before: CLAUSES[3].text, after: CLAUSES[3].text.replace("trimestralmente", "mensualmente") },
+      { clauseNumber: 11, title: "Valor inicial", before: CLAUSES[10].text, after: CLAUSES[10].text.replace("$ 450.000 (pesos cuatrocientos cincuenta mil)", "$ 540.000 (pesos quinientos cuarenta mil)") },
+    ],
   });
 
   const [pending] = await db
@@ -152,7 +153,7 @@ async function main() {
       status: "preview_ready",
       propertyLabel: "[Dirección] · Almagro",
       confirmedFields: FIELDS,
-      preview: { high: 1, attention: 2, none: 9 },
+      preview: SAMPLE_PREVIEW,
       createdAt: new Date("2026-10-15T12:00:00Z"),
     })
     .returning();

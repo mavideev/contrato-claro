@@ -1,6 +1,6 @@
 # Spec 03 — Pantallas y rutas
 
-**Estado:** en implementación (etapa 0, parte 4; ver [progress.md](../progress.md)) · **Etapa:** 0 (versión estática), después cada etapa conecta datos reales
+**Estado:** versión de la etapa 0 implementada (partes 4a y 4b; ver [progress.md](../progress.md)) · **Etapa:** 0 (versión estática), después cada etapa conecta datos reales
 **Fuente:** prototipo https://claude.ai/artifact/GXnaigS8tcsATZxUN1mQ6P (7 pantallas desktop y 8 mobile), documento base §3, §4 y §6
 
 ## Objetivo
@@ -53,9 +53,9 @@ Llevar las pantallas del prototipo a rutas reales de Next.js, responsive (una so
 
 ## Criterios de aceptación (etapa 0)
 
-- [ ] Las 15 vistas del prototipo y las 6 agregadas existen como rutas y renderizan sin errores en consola.
-- [ ] En 390 px no hay scroll horizontal y las acciones quedan al alcance (≥ 44 px).
-- [ ] Las vistas usan datos del seed cuando existen y datos fijos de ejemplo cuando no. Los botones navegan como en el prototipo.
-- [ ] `grep -ri "no guardamos" app components` no devuelve resultados.
-- [ ] Ningún texto dice «válido», «legal» ni «firmá».
-- [ ] Playwright: smoke test por ruta en 1280 y en 390.
+- [x] Las 15 vistas del prototipo y las 6 agregadas existen como rutas y renderizan sin errores en consola.
+- [x] En 390 px no hay scroll horizontal y las acciones quedan al alcance (≥ 44 px).
+- [x] Las vistas usan datos del seed cuando existen y datos fijos de ejemplo cuando no. Los botones navegan como en el prototipo.
+- [x] `grep -ri "no guardamos" app components` no devuelve resultados.
+- [x] Ningún texto dice «válido», «legal» ni «firmá».
+- [x] Playwright: smoke test por ruta en 1280 y en 390.

@@ -11,8 +11,8 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 | 1. Entorno Docker y app base | ✅ | Compose (Postgres+pgvector, RustFS, Mailpit, Inngest, Adminer), Dockerfile `dev`/`runner`, Makefile, `lib/env.ts`, `/api/health`, función Inngest `hello` | `23e242c`, `def03ed` |
 | 2. Esquema, migraciones y seed | ✅ | `db/schema.ts`, migraciones Drizzle, seed con 2 usuarios y 4 análisis, `lib/db/scoped.ts` con tests de aislamiento | `1925308` |
 | 3. Cuentas (Better Auth) | ✅ | ver detalle abajo | `7c70e5e` |
-| 4a. Sistema visual y panel | ✅ | ver detalle abajo | este commit |
-| 4b. Flujo del análisis (subir, escanear, confirmar, estado, pago, informe, re-chequeo) | ⏳ | spec 03 | |
+| 4a. Sistema visual y panel | ✅ | ver detalle abajo | `c95df7c` |
+| 4b. Flujo del análisis | ✅ | ver detalle abajo | este commit |
 | 5. Stubs: webhook de Mercado Pago, subida de prueba a S3 | ⏳ | specs 04 y 05 | |
 | 6. CI (GitHub Actions) y `render.yaml` | ⏳ | spec 00 | |
 
@@ -56,7 +56,35 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 | Playwright: smoke por ruta en 1280 y 390 (sin errores de consola ni scroll horizontal) y recorrido de borrar cuenta | ✅ | `e2e/` |
 | Panel vacío | 🟡 | sin análisis se redirige a `/analisis/nuevo` (spec 02), así que el estado vacío no se ve |
 
+### Parte 4b — Flujo del análisis (spec 03)
+
+Etapa 0: las pantallas son las reales y navegan como el prototipo, pero detrás no hay extracción, análisis ni Mercado Pago todavía (ver «Stubs» abajo).
+
+| Pantalla | Estado | Ruta |
+|---|---|---|
+| Subir (Alquiler; Compraventa y Boleto «Próximamente»; «Sacar foto» solo en mobile, aviso en desktop) | ✅ | `/analisis/nuevo` |
+| Escanear (mobile): maqueta con contador de páginas y «Listo (n)» | 🟡 | `/analisis/nuevo/escanear` (sin cámara real: etapa 2) |
+| Confirmar datos: 12 campos + fecha de firma prevista; aviso y «Revisá» del monto solo si el origen es foto | ✅ | `/analisis/[id]/confirmar` |
+| Análisis y pago: pasos, vista previa con el semáforo, «[PRECIO]», re-chequeo como extra | ✅ | `/analisis/[id]/estado` |
+| Retorno del pago: aprobado, pendiente, rechazado, cancelado, reembolsado (lee la base) | ✅ | `/pago/retorno?analisis=` |
+| Informe: hallazgos por nivel con la cláusula citada y «qué pedir», cláusulas sin alertas | ✅ | `/analisis/[id]/informe` |
+| Re-chequeo: compra → subir versión final → comparando → «Todo idéntico» o cambios con diff por palabras | ✅ | `/analisis/[id]/rechequeo` |
+| 404 para análisis ajenos o ids inválidos | ✅ | |
+
+**Stubs de la etapa 0** (`app/(app)/analisis/actions.ts`):
+- «Analizar contrato» crea el análisis con datos de ejemplo (`lib/analysis/sample.ts`) como si la extracción ya hubiera corrido. El archivo o texto no se envía: en la etapa 2 se sube directo a S3 con URL firmada.
+- El origen «foto» viaja en la URL (`?origen=foto`) hasta que exista `documents` (etapa 2).
+- «Confirmar y analizar» deja el análisis en `preview_ready` con una vista previa de ejemplo.
+- «Pagar con Mercado Pago» crea el pago `pending` (spec 04, paso 2) y va a `/pago/retorno`; la preferencia y el webhook llegan en la etapa 1, así que el pago queda pendiente.
+- El re-chequeo subido queda en «comparando» (la comparación real es de la etapa 4).
+- «Descargar informe PDF» y «Descargar certificado» están deshabilitados (etapas 3 y 4).
+
+**Seed:** el análisis «Firma hoy» trae un re-chequeo pagado con 2 cambios (cláusulas 4 y 11). Si tu base es anterior, `make reset`.
+
+**Tests:** `lib/diff.test.ts`, `lib/db/scoped.test.ts` (escrituras: confirmar, pagos, re-chequeo y aislamiento), `e2e/flow.spec.ts` (subir → confirmar → pagar; escaneo en mobile; informe y re-chequeo del seed; un usuario no puede abrir el análisis de otro) y el smoke de todas las rutas en 1280 y 390.
+
 ## Pendientes que no son de una parte
 
 - Captcha, Google OAuth probado con credenciales reales.
+- Borrar un análisis o un contrato suelto (el aviso «Podés borrarlo cuando quieras» hoy se cumple solo borrando la cuenta).
 - Preguntas abiertas: [open-questions.md](open-questions.md).

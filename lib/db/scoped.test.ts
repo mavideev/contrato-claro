@@ -2,9 +2,10 @@
 // (`make up`). Verifica el aislamiento entre usuarios (spec 01, "Acceso").
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { user } from "@/db/schema";
+import { analyses, user } from "@/db/schema";
 import { db, sql } from "@/lib/db";
 import { scoped } from "@/lib/db/scoped";
+import { SAMPLE_PREVIEW } from "@/lib/analysis/sample";
 
 let demoId: string;
 let otherId: string;
@@ -46,11 +47,60 @@ describe("scoped()", () => {
 
   it("el historial de pagos trae solo los del usuario, con su análisis", async () => {
     const mine = await scoped(demoId).payments.list();
-    expect(mine.length).toBe(3);
+    expect(mine.length).toBe(4);
     expect(mine.every((r) => r.payment.userId === demoId && r.payment.analysisId === r.analysis.id)).toBe(true);
   });
 
   it("exige userId", () => {
     expect(() => scoped("")).toThrow();
+  });
+});
+
+describe("scoped(): escrituras", () => {
+  const confirmValues = { confirmedFields: { property: "Test 123" }, signingDate: "2026-11-02", propertyLabel: "Test 123", preview: SAMPLE_PREVIEW };
+
+  it("crear, confirmar y no volver a editar después de pagar", async () => {
+    const me = scoped(demoId);
+    const a = await me.analyses.create({ status: "awaiting_confirmation" });
+    try {
+      const confirmed = await me.analyses.confirm(a.id, confirmValues);
+      expect(confirmed?.status).toBe("preview_ready");
+      expect(confirmed?.signingDate).toBe("2026-11-02");
+
+      await db().update(analyses).set({ status: "paid" }).where(eq(analyses.id, a.id));
+      expect(await me.analyses.confirm(a.id, confirmValues)).toBeNull();
+    } finally {
+      await db().delete(analyses).where(eq(analyses.id, a.id));
+    }
+  });
+
+  it("no confirma ni cobra análisis ajenos, ni con ids mal formados", async () => {
+    const [ajeno] = await scoped(otherId).analyses.list();
+    expect(await scoped(demoId).analyses.confirm(ajeno.id, confirmValues)).toBeNull();
+    expect(await scoped(demoId).payments.start(ajeno.id, "analysis", 0)).toBeNull();
+    expect(await scoped(demoId).rechecks.create(ajeno.id)).toBeNull();
+    expect(await scoped(demoId).analyses.get("no-es-un-uuid")).toBeNull();
+  });
+
+  it("iniciar el pago dos veces reutiliza el pendiente", async () => {
+    const me = scoped(demoId);
+    const a = await me.analyses.create({ status: "preview_ready" });
+    try {
+      const first = await me.payments.start(a.id, "analysis", 0);
+      const second = await me.payments.start(a.id, "analysis", 0);
+      expect(second?.id).toBe(first?.id);
+      expect(first?.status).toBe("pending");
+    } finally {
+      await db().delete(analyses).where(eq(analyses.id, a.id));
+    }
+  });
+
+  it("el re-chequeo exige un pago de re-chequeo aprobado", async () => {
+    const ready = (await scoped(demoId).analyses.list()).filter((a) => a.status === "ready");
+    const results = await Promise.all(ready.map((a) => scoped(demoId).rechecks.paid(a.id)));
+    // En el seed, solo el de «Firma hoy» tiene el re-chequeo pagado.
+    expect(results.filter(Boolean)).toHaveLength(1);
+    const unpaid = ready[results.findIndex((r) => !r)];
+    expect(await scoped(demoId).rechecks.create(unpaid.id)).toBeNull();
   });
 });

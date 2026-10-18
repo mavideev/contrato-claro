@@ -1,23 +1,10 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { seedIds, shotName, visit } from "./helpers";
 
 // Cada ruta renderiza sin errores de consola y sin scroll horizontal (spec 03).
 
 const PUBLIC = ["/ingresar", "/registro", "/verificar?email=demo@contratoclaro.local", "/recuperar", "/recuperar/nueva?token=x"];
-const PRIVATE = ["/analisis", "/analisis/nuevo", "/pagos", "/cuenta"];
-
-async function visit(page: Page, path: string) {
-  const errors: string[] = [];
-  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
-  page.on("pageerror", (e) => errors.push(e.message));
-  const res = await page.goto(path);
-  await page.waitForLoadState("networkidle");
-  expect(res?.status(), path).toBeLessThan(400);
-  expect(errors, `errores en ${path}`).toEqual([]);
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  expect(overflow, `scroll horizontal en ${path}`).toBeLessThanOrEqual(0);
-}
-
-const shot = (path: string) => path.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "") || "home";
+const PRIVATE = ["/analisis", "/analisis/nuevo", "/analisis/nuevo/escanear", "/pagos", "/cuenta"];
 
 test.describe("sin sesión", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
@@ -25,7 +12,7 @@ test.describe("sin sesión", () => {
   for (const path of PUBLIC) {
     test(`renderiza ${path}`, async ({ page }, info) => {
       await visit(page, path);
-      await page.screenshot({ path: info.outputPath(`${shot(path)}.png`), fullPage: true });
+      await page.screenshot({ path: info.outputPath(`${shotName(path)}.png`), fullPage: true });
     });
   }
 
@@ -39,7 +26,23 @@ test.describe("con sesión (demo)", () => {
   for (const path of PRIVATE) {
     test(`renderiza ${path}`, async ({ page }, info) => {
       await visit(page, path);
-      await page.screenshot({ path: info.outputPath(`${shot(path)}.png`), fullPage: true });
+      await page.screenshot({ path: info.outputPath(`${shotName(path)}.png`), fullPage: true });
     });
   }
+
+  test("renderiza las pantallas de cada análisis del seed", async ({ page }, info) => {
+    const ids = await seedIds(page);
+    const paths = [
+      `/analisis/${ids.ready}/informe`,
+      `/analisis/${ids.ready}/rechequeo`, // sin pagar: compra
+      `/analisis/${ids.signsToday}/rechequeo`, // con cambios
+      `/analisis/${ids.pending}/estado`,
+      `/analisis/${ids.pending}/confirmar`,
+      `/pago/retorno?analisis=${ids.pending}`,
+    ];
+    for (const path of paths) {
+      await visit(page, path);
+      await page.screenshot({ path: info.outputPath(`${shotName(path)}.png`), fullPage: true });
+    }
+  });
 });

@@ -2,7 +2,7 @@
 
 Webapp para analizar contratos de alquiler en Argentina: el usuario sube una foto, un PDF, un Word o el texto; la app detecta riesgos cláusula por cláusula y, el día de la firma, comprueba que la versión final no cambió. Nombre provisorio.
 
-> Estado: **etapa 0, parte 4** — entorno Docker, base con datos de ejemplo, cuentas y pantallas del panel. Detalle en [docs/progress.md](docs/progress.md).
+> Estado: **etapa 0, parte 4** — entorno Docker, base con datos de ejemplo, cuentas y todas las pantallas del prototipo (con stubs donde todavía no hay extracción, análisis ni pagos). Detalle en [docs/progress.md](docs/progress.md).
 
 ## Correr en local
 
@@ -21,7 +21,7 @@ make up          # o: docker compose up --build -d
 | Jobs (Inngest) | http://localhost:8288 | en *Functions* aparece `hello`; se prueba enviando el evento `test/hello` |
 | Base (Adminer) | http://localhost:8080 | `make tools`; servidor `db`, usuario/clave/base `contratos` |
 
-**Usuarios de ejemplo** (los crea el seed): `demo@contratoclaro.local` / `demo12345` (3 análisis: informe listo, firma hoy, pago pendiente) y `otro@contratoclaro.local` / `otro12345` (para probar que nadie ve análisis ajenos).
+**Usuarios de ejemplo** (los crea el seed): `demo@contratoclaro.local` / `demo12345` (3 análisis: informe listo, firma hoy con re-chequeo y 2 cambios, pago pendiente) y `otro@contratoclaro.local` / `otro12345` (para probar que nadie ve análisis ajenos).
 
 **Google (opcional):** cargá `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en `.env` (URI de redirección: `http://localhost:3000/api/auth/callback/google`) y volvé a levantar. Sin esas variables no aparece el botón.
 
