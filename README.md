@@ -2,7 +2,7 @@
 
 Webapp para analizar contratos de alquiler en Argentina: el usuario sube una foto, un PDF, un Word o el texto; la app detecta riesgos cláusula por cláusula y, el día de la firma, comprueba que la versión final no cambió. Nombre provisorio.
 
-> Estado: **etapa 0, parte 4** — entorno Docker, base con datos de ejemplo, cuentas y todas las pantallas del prototipo (con stubs donde todavía no hay extracción, análisis ni pagos). Detalle en [docs/progress.md](docs/progress.md).
+> Estado: **etapa 0, parte 5** — entorno Docker, base con datos de ejemplo, cuentas y todas las pantallas del prototipo (con stubs donde todavía no hay extracción, análisis ni pagos), webhook de Mercado Pago (firma e idempotencia) y subida a S3 con URL firmada. Detalle en [docs/progress.md](docs/progress.md).
 
 ## Correr en local
 

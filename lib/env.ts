@@ -37,6 +37,10 @@ const schema = z.object({
   SMTP_PORT: z.coerce.number().int().default(1025),
   RESEND_API_KEY: optional,
 
+  // Mercado Pago (spec 04). Sin el secreto, el webhook rechaza todo.
+  MP_ACCESS_TOKEN: optional,
+  MP_WEBHOOK_SECRET: optional,
+
   INNGEST_DEV: optional,
   INNGEST_EVENT_KEY: optional,
   INNGEST_SIGNING_KEY: optional,

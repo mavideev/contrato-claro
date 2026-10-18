@@ -13,8 +13,8 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 | 3. Cuentas (Better Auth) | ✅ | ver detalle abajo | `7c70e5e` |
 | 4a. Sistema visual y panel | ✅ | ver detalle abajo | `c95df7c` |
 | 4b. Flujo del análisis | ✅ | ver detalle abajo | `b8aa7a4` |
-| 4c. Navegación entre pantallas (correcciones de la prueba manual) | ✅ | encabezado en el flujo, panel vacío | este commit |
-| 5. Stubs: webhook de Mercado Pago, subida de prueba a S3 | ⏳ | specs 04 y 05 | |
+| 4c. Navegación entre pantallas (correcciones de la prueba manual) | ✅ | encabezado en el flujo, panel vacío | `fb3a4c3` |
+| 5. Webhook de Mercado Pago, subida a S3 e Inngest | ✅ | ver detalle abajo | este commit |
 | 6. CI (GitHub Actions) y `render.yaml` | ⏳ | spec 00 | |
 
 ### Parte 3 — Cuentas (spec 02)
@@ -83,6 +83,18 @@ Etapa 0: las pantallas son las reales y navegan como el prototipo, pero detrás 
 **Seed:** el análisis «Firma hoy» trae un re-chequeo pagado con 2 cambios (cláusulas 4 y 11). Si tu base es anterior, `make reset`.
 
 **Tests:** `lib/diff.test.ts`, `lib/db/scoped.test.ts` (escrituras: confirmar, pagos, re-chequeo y aislamiento), `e2e/flow.spec.ts` (subir → confirmar → pagar; escaneo en mobile; informe y re-chequeo del seed; un usuario no puede abrir el análisis de otro) y el smoke de todas las rutas en 1280 y 390.
+
+### Parte 5 — Webhook, subida a S3 e Inngest (specs 04 y 05)
+
+| Qué | Estado | Dónde |
+|---|---|---|
+| Webhook de Mercado Pago: firma inválida → 401; evento repetido → una sola fila en `payment_events`; responde 501 hasta la etapa 1 | ✅ | `app/api/webhooks/mercadopago/route.ts`, `lib/payments/mercadopago.ts` |
+| Subida con URL firmada (PUT directo del navegador a S3, tipo y tamaño firmados, verificación con HEAD) | ✅ | `lib/storage/upload.ts` |
+| Límites: 20 MB, JPG/PNG/HEIC/WEBP, PDF y DOCX | ✅ | `lib/storage/upload.ts` |
+| Inngest: la app aparece registrada y `test/hello` corre («Hola, …») | ✅ | `jobs/hello.ts` |
+| Usar la subida firmada desde la pantalla «Subir» | ⏳ | etapa 2 (con la extracción) |
+
+**Tests:** `lib/payments/mercadopago.test.ts`, `app/api/webhooks/mercadopago/route.test.ts`, `lib/storage/upload.test.ts` (sube un PDF de prueba a RustFS y lo borra).
 
 ## Pendientes que no son de una parte
 

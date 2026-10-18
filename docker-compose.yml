@@ -17,6 +17,9 @@ x-app-env: &app-env
   SMTP_HOST: mailpit
   SMTP_PORT: "1025"
   INNGEST_DEV: http://inngest:8288
+  # Webhook de Mercado Pago: valor local; en la etapa 1, el de la app de prueba.
+  MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-mp-webhook-secret-local}
+  MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
   # Opcionales: se leen del archivo .env si existe.
   GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
   GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}

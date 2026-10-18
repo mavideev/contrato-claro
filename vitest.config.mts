@@ -16,9 +16,14 @@ export default defineConfig({
       APP_URL: "http://localhost:3000",
       DATABASE_URL: process.env.DATABASE_URL ?? "postgres://contratos:contratos@localhost:5432/contratos",
       BETTER_AUTH_SECRET: "test-secret-de-al-menos-32-caracteres!!",
+      MP_WEBHOOK_SECRET: "secreto-de-prueba",
+      // RustFS del compose (las pruebas de subida usan el almacenamiento local).
+      S3_ENDPOINT: "http://localhost:9000",
+      S3_PUBLIC_ENDPOINT: "http://localhost:9000",
+      S3_FORCE_PATH_STYLE: "true",
       S3_BUCKET: "contracts",
-      S3_ACCESS_KEY_ID: "test",
-      S3_SECRET_ACCESS_KEY: "test",
+      S3_ACCESS_KEY_ID: "contratos",
+      S3_SECRET_ACCESS_KEY: "contratos-local-secret",
     },
   },
 });
