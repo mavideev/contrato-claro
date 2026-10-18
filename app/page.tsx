@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 // Placeholder de la etapa 0. Se reemplaza por el flujo real en la parte de pantallas.
 export default function Home() {
   return (
@@ -10,6 +12,14 @@ export default function Home() {
           /api/health
         </a>
         .
+      </p>
+      <p className="flex gap-4 text-lg">
+        <Link className="font-semibold text-primary underline" href="/ingresar">
+          Ingresar
+        </Link>
+        <Link className="font-semibold text-primary underline" href="/registro">
+          Crear cuenta
+        </Link>
       </p>
     </main>
   );

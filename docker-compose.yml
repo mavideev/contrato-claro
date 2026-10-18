@@ -5,6 +5,7 @@ name: contrato-claro
 x-app-env: &app-env
   APP_URL: http://localhost:3000
   DATABASE_URL: postgres://contratos:contratos@db:5432/contratos
+  BETTER_AUTH_SECRET: contrato-claro-local-secret-no-usar-en-produccion
   S3_ENDPOINT: http://storage:9000
   S3_PUBLIC_ENDPOINT: http://localhost:9000
   S3_REGION: us-east-1

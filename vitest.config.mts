@@ -15,6 +15,7 @@ export default defineConfig({
     env: {
       APP_URL: "http://localhost:3000",
       DATABASE_URL: process.env.DATABASE_URL ?? "postgres://contratos:contratos@localhost:5432/contratos",
+      BETTER_AUTH_SECRET: "test-secret-de-al-menos-32-caracteres!!",
       S3_BUCKET: "contracts",
       S3_ACCESS_KEY_ID: "test",
       S3_SECRET_ACCESS_KEY: "test",

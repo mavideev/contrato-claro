@@ -2,7 +2,7 @@
 
 Webapp para analizar contratos de alquiler en Argentina: el usuario sube una foto, un PDF, un Word o el texto; la app detecta riesgos cláusula por cláusula y, el día de la firma, comprueba que la versión final no cambió. Nombre provisorio.
 
-> Estado: **etapa 0, parte 2** — entorno Docker, esquema de base con migraciones y datos de ejemplo.
+> Estado: **etapa 0, parte 3** — entorno Docker, esquema de base con datos de ejemplo y cuentas (registro, ingreso, link mágico, recuperar contraseña). Detalle en [docs/progress.md](docs/progress.md).
 
 ## Correr en local
 
@@ -14,14 +14,16 @@ make up          # o: docker compose up --build -d
 
 | Qué | URL | Notas |
 |---|---|---|
-| App | http://localhost:3000 | |
+| App | http://localhost:3000 | ingresar en `/ingresar`, crear cuenta en `/registro` |
 | Estado de servicios | http://localhost:3000/api/health | `{"status":"ok","db":"ok","storage":"ok"}` |
-| Mails (Mailpit) | http://localhost:8025 | acá llegan los mails de registro y link mágico |
+| Mails (Mailpit) | http://localhost:8025 | acá llegan los mails de verificación, link mágico y recuperación |
 | Archivos S3 (RustFS) | http://localhost:9001/rustfs/console/ | usuario `contratos`, clave `contratos-local-secret` |
 | Jobs (Inngest) | http://localhost:8288 | en *Functions* aparece `hello`; se prueba enviando el evento `test/hello` |
 | Base (Adminer) | http://localhost:8080 | `make tools`; servidor `db`, usuario/clave/base `contratos` |
 
 **Usuarios de ejemplo** (los crea el seed): `demo@contratoclaro.local` / `demo12345` (3 análisis: informe listo, firma hoy, pago pendiente) y `otro@contratoclaro.local` / `otro12345` (para probar que nadie ve análisis ajenos).
+
+**Google (opcional):** cargá `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en `.env` (URI de redirección: `http://localhost:3000/api/auth/callback/google`) y volvé a levantar. Sin esas variables no aparece el botón.
 
 **Tests:** `pnpm test` (necesita `make up` corriendo: usa la base local).
 
@@ -39,6 +41,7 @@ Otros comandos: `make down` (detiene), `make reset` (borra datos y vuelve a leva
 
 ## Documentos
 
+- [Avance de la implementación](docs/progress.md)
 - [Documento base del MVP v0.2](documento-base-mvp-v0.2.md)
 - Specs: [00 Arquitectura](docs/specs/00-architecture.md) · [01 Modelo de datos](docs/specs/01-data-model.md) · [02 Cuentas](docs/specs/02-auth.md) · [03 Pantallas](docs/specs/03-screens.md) · [04 Pagos](docs/specs/04-payments.md) · [05 Jobs y análisis](docs/specs/05-jobs-and-analysis.md)
 - [Decisión 0001 — Stack](docs/decisions/0001-stack.md) · [Preguntas abiertas](docs/open-questions.md)

@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
+/* Sistema visual del prototipo (spec 03, "Sistema visual"). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f2ec;
+  --foreground: #102a43;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: #ffffff;
+  --color-ink: #102a43;
+  --color-ink-2: #3e4c59;
+  --color-ink-3: #5b6b7b;
+  --color-primary: #0e7c7b;
+  --color-primary-hover: #0b6665;
+  --color-focus: #7cc4c2;
+  --color-line: #cfcbc0;
+  --color-line-soft: #e2ded4;
+  --color-high: #c0392b;
+  --color-high-bg: #fbe3e0;
+  --color-high-fg: #8e2a20;
+  --color-attention: #d69e2e;
+  --color-attention-bg: #fbefd5;
+  --color-attention-fg: #7a4b00;
+  --color-ok: #2f7d4f;
+  --color-ok-bg: #dff0e3;
+  --color-ok-fg: #1f5e39;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }

@@ -61,8 +61,8 @@ Ningún secreto va en el repositorio. `.env.example` solo trae valores locales q
 ## Criterios de aceptación (etapa 0)
 
 - [ ] `cp .env.example .env && docker compose up` levanta todo, sin otro requisito que Docker.
-- [ ] Todos los servicios quedan *healthy* y el servicio `migrate` termina con código 0.
-- [ ] `GET /api/health` responde `200 {"status":"ok","db":"ok"}`. Si la base no responde, devuelve 503.
+- [x] Todos los servicios quedan *healthy* y el servicio `migrate` termina con código 0.
+- [x] `GET /api/health` responde `200 {"status":"ok","db":"ok"}`. Si la base no responde, devuelve 503.
 - [ ] `docker build --target runner .` produce la imagen de producción y arranca con `node server.js`.
 - [ ] CI: lint, typecheck, unit tests, build de la imagen y Playwright smoke contra el compose.
 - [ ] `render.yaml` describe el Web Service y la base. El primer despliegue responde a `/api/health`.

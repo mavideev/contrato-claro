@@ -15,6 +15,12 @@ const schema = z.object({
   APP_URL: z.url(),
   DATABASE_URL: z.url(),
 
+  // Firma de cookies y tokens de Better Auth. En producción, un valor aleatorio
+  // (`openssl rand -base64 32`).
+  BETTER_AUTH_SECRET: z.string().min(32),
+  GOOGLE_CLIENT_ID: optional,
+  GOOGLE_CLIENT_SECRET: optional,
+
   S3_ENDPOINT: optional.pipe(z.url().optional()),
   S3_PUBLIC_ENDPOINT: optional.pipe(z.url().optional()),
   S3_REGION: z.string().default("us-east-1"),
