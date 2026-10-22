@@ -9,6 +9,8 @@ import { bucket, s3 } from "./s3";
 // La app firma un PUT con tipo y tamaño fijos; al terminar, verifica con HEAD.
 
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+/** Páginas por contrato: fotos o páginas de un PDF. */
+export const MAX_PAGES = 30;
 export const ALLOWED_TYPES = [
   "image/jpeg",
   "image/png",

@@ -1,8 +1,10 @@
-// Crea el bucket privado de contratos si no existe. Lo corre el servicio
-// `setup` del compose; en producción el bucket de R2 se crea a mano.
+// Crea el bucket privado de contratos si no existe y le aplica CORS (el
+// navegador sube directo con URL firmadas). Lo corre el servicio `setup` del
+// compose; en producción el bucket de R2 se configura a mano (docs/deploy.md).
 import {
   CreateBucketCommand,
   HeadBucketCommand,
+  PutBucketCorsCommand,
   PutPublicAccessBlockCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -24,13 +26,29 @@ const client = new S3Client({
 });
 
 async function main() {
+  if (await exists()) console.log(`[setup-storage] bucket "${Bucket}" ya existe`);
+  else await create();
+  // Siempre: un bucket creado antes de la etapa 2 no tenía CORS.
+  const origin = new URL(process.env.APP_URL ?? "http://localhost:3000").origin;
+  await client.send(
+    new PutBucketCorsCommand({
+      Bucket,
+      CORSConfiguration: { CORSRules: [{ AllowedOrigins: [origin], AllowedMethods: ["PUT"], AllowedHeaders: ["content-type"], MaxAgeSeconds: 3600 }] },
+    }),
+  );
+  console.log(`[setup-storage] CORS: PUT desde ${origin}`);
+}
+
+async function exists() {
   try {
     await client.send(new HeadBucketCommand({ Bucket }));
-    console.log(`[setup-storage] bucket "${Bucket}" ya existe`);
-    return;
+    return true;
   } catch {
-    // no existe: se crea abajo
+    return false;
   }
+}
+
+async function create() {
   await client.send(new CreateBucketCommand({ Bucket }));
   try {
     await client.send(

@@ -20,6 +20,7 @@ import { db as defaultDb, type Db } from "@/lib/db";
 
 type PaymentKind = (typeof payments.$inferSelect)["kind"];
 type AnalysisStatus = (typeof analyses.$inferSelect)["status"];
+type DocumentKind = (typeof documents.$inferSelect)["kind"];
 
 // Un id mal formado no llega a la base (Postgres rechazaría el uuid con un error 500).
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -70,6 +71,44 @@ export function scoped(userId: string, db: Db = defaultDb()) {
           .values({ ...values, userId })
           .returning()
           .then(([row]) => row);
+      },
+      /**
+       * Análisis nuevo con el contrato ya subido (spec 05, "Subida de archivos"):
+       * queda en `extracting` hasta que corre la extracción. Las fotos van como
+       * un documento con una página por foto.
+       */
+      async createFromUpload(upload: { kind: DocumentKind; mime: string; sizeBytes: number; storageKey: string; pages?: { storageKey: string; sizeBytes: number }[] }) {
+        return db.transaction(async (tx) => {
+          const [analysis] = await tx.insert(analyses).values({ userId, contractType: "rental", status: "extracting" }).returning();
+          const [document] = await tx
+            .insert(documents)
+            .values({ analysisId: analysis.id, kind: upload.kind, mime: upload.mime, sizeBytes: upload.sizeBytes, storageKey: upload.storageKey, pageCount: upload.pages?.length })
+            .returning();
+          if (upload.pages?.length) {
+            await tx.insert(documentPages).values(upload.pages.map((p, i) => ({ documentId: document.id, pageNumber: i + 1, storageKey: p.storageKey })));
+          }
+          return analysis;
+        });
+      },
+      /** No se pudo encolar la extracción: el análisis queda como fallido. */
+      async markFailed(id: string, errorCode: string) {
+        if (!UUID.test(id)) return;
+        await db.update(analyses).set({ status: "failed", errorCode }).where(and(ownAnalysis(id), eq(analyses.status, "extracting")));
+      },
+      /** Contrato original subido (para saber si vino de una foto). */
+      async original(id: string) {
+        if (!(await getAnalysis(id))) return null;
+        const [row] = await db
+          .select()
+          .from(documents)
+          .where(and(eq(documents.analysisId, id), eq(documents.role, "original")))
+          .orderBy(asc(documents.createdAt))
+          .limit(1);
+        return row ?? null;
+      },
+      async clauses(id: string) {
+        if (!(await getAnalysis(id))) return [];
+        return db.select().from(clauses).where(eq(clauses.analysisId, id)).orderBy(asc(clauses.number));
       },
       /** Guarda los datos confirmados. Solo antes de pagar; si no, devuelve null. */
       async confirm(id: string, values: { confirmedFields: ConfirmedFields; signingDate: string | null; propertyLabel: string | null; preview: PreviewCounts }) {

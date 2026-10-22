@@ -1,6 +1,11 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
+// DB_PORT del .env (si el 5432 está ocupado en la máquina). En CI no hay .env.
+try {
+  process.loadEnvFile(".env");
+} catch {}
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -14,7 +19,7 @@ export default defineConfig({
     exclude: ["node_modules/**", ".next/**", "e2e/**"],
     env: {
       APP_URL: "http://localhost:3000",
-      DATABASE_URL: process.env.DATABASE_URL ?? "postgres://contratos:contratos@localhost:5432/contratos",
+      DATABASE_URL: process.env.DATABASE_URL ?? `postgres://contratos:contratos@localhost:${process.env.DB_PORT ?? 5432}/contratos`,
       BETTER_AUTH_SECRET: "test-secret-de-al-menos-32-caracteres!!",
       MP_WEBHOOK_SECRET: "secreto-de-prueba",
       // RustFS del compose (las pruebas de subida usan el almacenamiento local).

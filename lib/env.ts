@@ -47,6 +47,11 @@ const schema = z.object({
   PRICE_ANALYSIS_ARS: z.coerce.number().int().nonnegative().default(0),
   PRICE_RECHECK_ARS: z.coerce.number().int().nonnegative().default(0),
 
+  // IA (spec 05). `mock`: simulador local en lugar de Claude. Por defecto,
+  // Claude si hay ANTHROPIC_API_KEY y el simulador si no (nunca en producción).
+  ANTHROPIC_API_KEY: optional,
+  AI_PROVIDER: optional.pipe(z.enum(["mock", "anthropic"]).optional()),
+
   INNGEST_DEV: optional,
   INNGEST_EVENT_KEY: optional,
   INNGEST_SIGNING_KEY: optional,

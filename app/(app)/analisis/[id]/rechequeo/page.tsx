@@ -6,6 +6,7 @@ import { BottomBar, FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { RecheckUpload } from "@/components/app/recheck-upload";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Kicker, Title } from "@/components/ui/typography";
+import { clauseLabel } from "@/lib/analysis/presentation";
 import { requireUser } from "@/lib/auth/session";
 import { scoped } from "@/lib/db/scoped";
 import { wordDiff } from "@/lib/diff";
@@ -134,7 +135,7 @@ async function Recheck({ params }: Pick<PageProps<"/analisis/[id]/rechequeo">, "
         {changes.map((c) => (
           <div key={c.clauseNumber} className="flex flex-col gap-1.5 rounded-[14px] border border-line-soft bg-surface p-4 md:gap-2 md:px-6 md:py-5">
             <Kicker>
-              Cláusula {c.clauseNumber} · {c.title}
+              {clauseLabel({ number: c.clauseNumber, title: c.title })}
             </Kicker>
             <p className="text-base leading-[1.7] md:text-lg md:leading-relaxed">
               {wordDiff(c.before, c.after).map((s, i) =>

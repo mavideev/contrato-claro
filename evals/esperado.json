@@ -1,0 +1,22 @@
+{
+  "01-ordinales.txt": {
+    "clausulas": [[0, "Encabezado"], [1, "Objeto"], [2, "Plazo"], [3, "Precio"], [4, "Ajuste"], [5, "Depósito"], [6, "Garantía"], [7, "Expensas"], [8, "Servicios"], [9, "Rescisión"], [10, "Mejoras"], [11, "Comisión"], [12, "Domicilios"], [13, "Jurisdicción"]],
+    "contiene": { "3": "PESOS CUATROCIENTOS CINCUENTA MIL ($ 450.000) mensuales", "13": "En prueba de conformidad" }
+  },
+  "02-clausula-guiones.txt": {
+    "clausulas": [[0, "Encabezado"], [1, "Objeto"], [2, "Plazo"], [3, "Precio"], [4, "Actualización"], [5, "Garantía"], [6, "Rescisión anticipada"]],
+    "contiene": { "2": "3) con los servicios al día.", "3": "conforme lo dispuesto en la cláusula cuarta." }
+  },
+  "03-articulos.txt": {
+    "clausulas": [[1, "Objeto"], [2, "Plazo"], [3, "Precio"], [4, "Depósito"], [5, "Impuestos"]],
+    "contiene": { "3": "(USD 500)" }
+  },
+  "04-numeros.txt": {
+    "clausulas": [[0, "Encabezado"], [1, "Objeto"], [2, "Plazo"], [3, "Precio y forma de pago"], [4, "Ajuste"], [5, "Expensas"]],
+    "contiene": { "3": "b) dentro de los primeros diez días de cada mes." }
+  },
+  "05-sin-titulos.txt": {
+    "clausulas": [[0, "Encabezado"], [1, "Objeto"], [2, "Plazo"], [3, "Precio"], [4, "Cláusula 4"]],
+    "contiene": { "4": "El locatario acepta." }
+  }
+}

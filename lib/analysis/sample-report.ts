@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as s from "../../db/schema";
 
-// Informe de ejemplo: lo usan el seed y, en la etapa 1, el job que corre
-// después de un pago aprobado (el análisis real con IA es la etapa 3).
+// Informe de ejemplo: lo usan el seed y el job que corre después de un pago
+// aprobado, hasta que llegue el análisis real con IA (etapa 3). Desde la etapa 2
+// usa las cláusulas reales del contrato y marca las de depósito, ajuste y rescisión.
 // Imports relativos: también lo importa scripts/seed.ts (fuera de Next).
 
 // Contrato de ejemplo: 12 cláusulas; 3 con hallazgos (las del prototipo).
@@ -23,47 +24,92 @@ export const SAMPLE_CLAUSES: { title: string; text: string }[] = [
   { title: "Domicilios", text: "Las partes constituyen domicilio en los indicados al inicio, donde serán válidas las notificaciones." },
 ];
 
-export const SAMPLE_FINDINGS: Record<number, Omit<typeof s.findings.$inferInsert, "analysisId" | "clauseId">> = {
-  7: {
-    level: "high",
-    title: "Depósito de 3 meses sin plazo de devolución",
-    explanation: "No dice en cuántos días se devuelve ni con qué ajuste. Pedí que quede por escrito.",
-    whatToAsk: "Pedí que se agregue el plazo de devolución en días y cómo se actualiza el monto al momento de devolverlo.",
+type SampleFinding = Omit<typeof s.findings.$inferInsert, "analysisId" | "clauseId">;
+
+// Los hallazgos del prototipo, por tema de la cláusula.
+const SAMPLE_FINDINGS: { topic: RegExp; finding: SampleFinding }[] = [
+  {
+    topic: /dep[oó]sito/i,
+    finding: {
+      level: "high",
+      title: "Depósito sin plazo de devolución",
+      explanation: "No dice en cuántos días se devuelve ni con qué ajuste. Pedí que quede por escrito.",
+      whatToAsk: "Pedí que se agregue el plazo de devolución en días y cómo se actualiza el monto al momento de devolverlo.",
+    },
   },
-  4: {
-    level: "attention",
-    title: "Ajuste trimestral por IPC",
-    explanation: "Confirmá la fuente del índice y desde qué fecha rige el primer ajuste.",
-    whatToAsk: "Preguntá desde qué mes se aplica el primer ajuste y qué índice se usa si el IPC deja de publicarse.",
+  {
+    topic: /ajuste|actualizaci/i,
+    finding: {
+      level: "attention",
+      title: "Ajuste del precio",
+      explanation: "Confirmá la fuente del índice y desde qué fecha rige el primer ajuste.",
+      whatToAsk: "Preguntá desde qué mes se aplica el primer ajuste y qué índice se usa si deja de publicarse.",
+    },
   },
-  9: {
-    level: "attention",
-    title: "Preaviso de 90 días para el inquilino",
-    explanation: "Revisá si hay penalidad y desde qué mes se puede rescindir.",
-    whatToAsk: "Buscá si hay una penalidad en meses de alquiler por rescindir antes de tiempo y desde qué mes podés hacerlo.",
+  {
+    topic: /rescisi/i,
+    finding: {
+      level: "attention",
+      title: "Condiciones para rescindir",
+      explanation: "Revisá si hay penalidad y desde qué mes se puede rescindir.",
+      whatToAsk: "Buscá si hay una penalidad en meses de alquiler por rescindir antes de tiempo y desde qué mes podés hacerlo.",
+    },
   },
-};
+];
+
+/** Hallazgos de ejemplo por número de cláusula: la primera cláusula de cada tema. */
+export function sampleFindings(clauses: { number: number; title: string }[]): Map<number, SampleFinding> {
+  const out = new Map<number, SampleFinding>();
+  for (const { topic, finding } of SAMPLE_FINDINGS) {
+    const clause = clauses.find((c) => topic.test(c.title) && !out.has(c.number));
+    if (clause) out.set(clause.number, finding);
+  }
+  return out;
+}
+
+/** Vista previa coherente con el informe de ejemplo. */
+export function samplePreview(clauses: { number: number; title: string }[]): s.PreviewCounts {
+  const levels = [...sampleFindings(clauses).values()].map((f) => f.level);
+  const high = levels.filter((l) => l === "high").length;
+  const attention = levels.filter((l) => l === "attention").length;
+  return { high, attention, none: clauses.length - high - attention };
+}
 
 const sha256 = (t: string) => createHash("sha256").update(t).digest("hex");
 
-/** Escribe cláusulas, hallazgos y huella de ejemplo. Si ya existen, no hace nada. */
+/**
+ * Escribe hallazgos y huella de ejemplo sobre las cláusulas del análisis. Si no
+ * tiene cláusulas (seed), escribe las del contrato de ejemplo. Si ya hay
+ * hallazgos, no hace nada.
+ */
 export async function writeSampleReport(db: PostgresJsDatabase<typeof s>, analysisId: string) {
-  const [existing] = await db.select({ id: s.clauses.id }).from(s.clauses).where(eq(s.clauses.analysisId, analysisId)).limit(1);
+  const [existing] = await db.select({ id: s.findings.id }).from(s.findings).where(eq(s.findings.analysisId, analysisId)).limit(1);
   if (existing) return;
 
-  const inserted = await db
-    .insert(s.clauses)
-    .values(SAMPLE_CLAUSES.map((c, i) => ({ analysisId, number: i + 1, title: c.title, text: c.text, sha256: sha256(c.text) })))
-    .returning();
+  let clauses = await db.select().from(s.clauses).where(eq(s.clauses.analysisId, analysisId)).orderBy(asc(s.clauses.number));
+  if (clauses.length === 0) {
+    clauses = await db
+      .insert(s.clauses)
+      .values(SAMPLE_CLAUSES.map((c, i) => ({ analysisId, number: i + 1, title: c.title, text: c.text, sha256: sha256(c.text) })))
+      .returning();
+  }
 
-  await db.insert(s.findings).values(
-    inserted.filter((c) => SAMPLE_FINDINGS[c.number]).map((c) => ({ ...SAMPLE_FINDINGS[c.number], analysisId, clauseId: c.id })),
-  );
+  const findings = sampleFindings(clauses);
+  const flagged = clauses.filter((c) => findings.has(c.number));
+  if (flagged.length) await db.insert(s.findings).values(flagged.map((c) => ({ ...findings.get(c.number)!, analysisId, clauseId: c.id })));
 
-  await db.insert(s.fingerprints).values({
-    analysisId,
-    fileSha256: sha256(`archivo-${analysisId}`),
-    normalizedTextSha256: sha256(SAMPLE_CLAUSES.map((c) => c.text).join("\n")),
-    clauseHashes: Object.fromEntries(inserted.map((c) => [c.number, c.sha256])),
-  });
+  const [document] = await db
+    .select({ sha256: s.documents.sha256 })
+    .from(s.documents)
+    .where(and(eq(s.documents.analysisId, analysisId), eq(s.documents.role, "original")))
+    .limit(1);
+  await db
+    .insert(s.fingerprints)
+    .values({
+      analysisId,
+      fileSha256: document?.sha256 ?? sha256(`archivo-${analysisId}`),
+      normalizedTextSha256: sha256(clauses.map((c) => c.text).join("\n")),
+      clauseHashes: Object.fromEntries(clauses.map((c) => [c.number, c.sha256])),
+    })
+    .onConflictDoNothing();
 }

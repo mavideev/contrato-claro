@@ -1,13 +1,30 @@
 "use client";
 import Link from "next/link";
-import { useActionState, useState, type ReactNode } from "react";
+import { startTransition, useActionState, useState, type ReactNode } from "react";
 import { startAnalysis, type FormState } from "@/app/(app)/analisis/actions";
+import { fileType, uploadFiles } from "./upload-client";
 import { Button, buttonClass } from "@/components/ui/button";
 import { Kicker, STORAGE_NOTICE } from "@/components/ui/typography";
 import { useIsMobile } from "./use-is-mobile";
 
 // Prototipo 2 · Subir contrato. Correcciones de la spec 03: «Sacar foto» solo
 // en mobile (en desktop, aviso), Compraventa y Boleto «Próximamente».
+// El archivo sube directo a S3 antes de llamar a la acción (no viaja en el formulario).
+
+const MAX_MB = 20;
+
+/** Sube el archivo elegido y le pasa a la acción solo la clave. */
+async function submit(prev: FormState, form: FormData): Promise<FormState> {
+  const file = form.get("upload");
+  form.delete("upload");
+  if (form.get("method") === "archivo") {
+    if (!(file instanceof File) || file.size === 0) return { error: "Elegí el archivo del contrato." };
+    const res = await uploadFiles([{ blob: file, type: fileType(file) }]);
+    if ("error" in res) return res;
+    form.set("file", JSON.stringify(res.uploaded[0]));
+  }
+  return startAnalysis(prev, form);
+}
 
 type Method = "foto" | "archivo" | "texto";
 
@@ -44,11 +61,29 @@ export function UploadForm() {
   const isMobile = useIsMobile();
   const [chosen, setChosen] = useState<Method | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const method: Method = chosen && (chosen !== "foto" || isMobile) ? chosen : isMobile ? "foto" : "archivo";
-  const [state, action, pending] = useActionState<FormState, FormData>(startAnalysis, {});
+  const [state, action, pending] = useActionState<FormState, FormData>(submit, {});
+
+  function pick(input: HTMLInputElement) {
+    const file = input.files?.[0];
+    setFileName(file?.name ?? null);
+    const type = file ? fileType(file) : "";
+    if (file && !/pdf|wordprocessingml/.test(type)) setFileError("Subí un PDF o un Word (.docx).");
+    else if (file && file.size > MAX_MB * 1024 * 1024) setFileError(`El archivo pesa más de ${MAX_MB} MB.`);
+    else setFileError(null);
+  }
 
   return (
-    <form action={action} className="flex max-w-[620px] flex-1 flex-col gap-5 md:gap-6">
+    // onSubmit en vez de `action`: si algo falla, React no vacía el formulario (el texto pegado queda).
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const form = new FormData(e.currentTarget);
+        startTransition(() => action(form));
+      }}
+      className="flex max-w-[620px] flex-1 flex-col gap-5 md:gap-6"
+    >
       <input type="hidden" name="contractType" value="rental" />
       <input type="hidden" name="method" value={method} />
 
@@ -109,9 +144,19 @@ export function UploadForm() {
           Para sacar fotos, entrá desde tu celular.
         </p>
 
-        {/* Sin `name`: en la etapa 0 no se procesa; en la etapa 2 se sube directo a S3. */}
         {method === "archivo" && (
-          <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 border-dashed border-[#B9C4CC] bg-surface p-6 text-center text-[15px] text-ink-2">
+          <label
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const input = e.currentTarget.querySelector("input");
+              if (input && e.dataTransfer.files.length) {
+                input.files = e.dataTransfer.files;
+                pick(input);
+              }
+            }}
+            className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 border-dashed border-[#B9C4CC] bg-surface p-6 text-center text-[15px] text-ink-2"
+          >
             {fileName ? (
               <span className="font-semibold break-all text-ink">{fileName}</span>
             ) : (
@@ -119,12 +164,14 @@ export function UploadForm() {
                 Arrastrá tu archivo acá o <span className="font-semibold text-primary-hover underline">elegilo desde tu dispositivo</span>
               </span>
             )}
-            <span className="text-[13px] text-ink-3">{fileName ? "Tocá para cambiarlo" : "PDF o Word · hasta 20 MB"}</span>
+            <span className="text-[13px] text-ink-3">{fileName ? "Tocá para cambiarlo" : `PDF o Word · hasta ${MAX_MB} MB`}</span>
             <input
               type="file"
+              name="upload"
               required
+              aria-label="Archivo del contrato"
               accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={(e) => setFileName(e.currentTarget.files?.[0]?.name ?? null)}
+              onChange={(e) => pick(e.currentTarget)}
               className="sr-only"
             />
           </label>
@@ -133,7 +180,9 @@ export function UploadForm() {
           <label className="flex flex-col gap-1.5 text-sm font-medium">
             Texto del contrato
             <textarea
+              name="text"
               required
+              minLength={100}
               placeholder="Pegá acá el texto completo del contrato"
               className="h-28 resize-y rounded-xl border border-line bg-surface px-3.5 py-3 text-[15px] font-normal text-ink"
             />
@@ -141,9 +190,9 @@ export function UploadForm() {
         )}
       </fieldset>
 
-      {state.error && (
+      {((method === "archivo" && fileError) || state.error) && (
         <p role="alert" className="text-sm text-high-fg">
-          {state.error}
+          {(method === "archivo" && fileError) || state.error}
         </p>
       )}
 
@@ -153,8 +202,8 @@ export function UploadForm() {
             Abrir cámara
           </Link>
         ) : (
-          <Button type="submit" disabled={pending} className="min-h-[52px] w-full text-[17px]">
-            Analizar contrato
+          <Button type="submit" disabled={pending || (method === "archivo" && !!fileError)} className="min-h-[52px] w-full text-[17px]">
+            {pending ? (method === "archivo" ? "Subiendo…" : "Enviando…") : "Analizar contrato"}
           </Button>
         )}
         <p className="text-center text-[13px] leading-snug text-ink-3 md:text-left md:text-sm">{STORAGE_NOTICE}</p>

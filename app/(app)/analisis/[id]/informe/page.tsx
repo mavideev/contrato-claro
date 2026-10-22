@@ -5,7 +5,7 @@ import { BottomBar, FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { RiskCounts } from "@/components/ui/pill";
 import { Title } from "@/components/ui/typography";
-import { CONTRACT_LABEL } from "@/lib/analysis/presentation";
+import { clauseLabel, CONTRACT_LABEL } from "@/lib/analysis/presentation";
 import { requireUser } from "@/lib/auth/session";
 import { scoped } from "@/lib/db/scoped";
 import { formatDayTime } from "@/lib/format";
@@ -72,7 +72,7 @@ async function Report({ params }: Pick<PageProps<"/analisis/[id]/informe">, "par
                 <span className={`mt-1.5 size-3 shrink-0 rounded-full md:size-3.5 ${LEVEL[f.level].dot} ${LEVEL[f.level].halo}`} />
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="text-[11px] font-semibold tracking-[0.08em] text-ink-3 uppercase md:text-[13px]">
-                    Cláusula {clause.number} · {clause.title}
+                    {clauseLabel(clause)}
                   </span>
                   <span className="font-display text-lg leading-tight font-semibold md:text-[22px]">{f.title}</span>
                   <span className="text-sm leading-normal text-ink-2 md:text-base">{f.explanation}</span>
@@ -113,7 +113,7 @@ async function Report({ params }: Pick<PageProps<"/analisis/[id]/informe">, "par
           <ul className="flex flex-col gap-1 px-4 pb-4 text-[15px] text-ink-2 md:px-14 md:pb-5">
             {clean.map((c) => (
               <li key={c.id}>
-                Cláusula {c.number} · {c.title}
+                {clauseLabel(c)}
               </li>
             ))}
           </ul>

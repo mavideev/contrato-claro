@@ -1,7 +1,6 @@
 import type { ConfirmedFields, PreviewCounts } from "@/db/schema";
 
-// Datos de ejemplo de la etapa 0: los usa el seed y el stub que simula la
-// extracción (etapa 2) y la vista previa (etapa 3) al subir un contrato.
+// Datos de ejemplo para el seed (los análisis nuevos usan los datos leídos del contrato).
 
 export const SAMPLE_FIELDS: ConfirmedFields = {
   landlord: "[Nombre completo]",

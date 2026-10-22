@@ -26,6 +26,7 @@ x-app-env: &app-env
   GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
   GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  AI_PROVIDER: ${AI_PROVIDER:-}
 
 services:
   db:
@@ -34,7 +35,8 @@ services:
       POSTGRES_USER: contratos
       POSTGRES_PASSWORD: contratos
       POSTGRES_DB: contratos
-    ports: ["5432:5432"]
+    # DB_PORT: otro puerto en la máquina si el 5432 ya está ocupado (por ejemplo, un Postgres local).
+    ports: ["${DB_PORT:-5432}:5432"]
     volumes: [db-data:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U contratos -d contratos"]

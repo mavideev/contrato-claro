@@ -10,16 +10,20 @@ import { FIELDS } from "@/lib/analysis/fields";
 // Prototipo 3 · Confirmar datos / móvil 4. Si el origen es una foto, el monto
 // queda en «Revisá» hasta que se toca, con el aviso al costado.
 
+/** De dónde salió el monto: un pedazo de la cláusula con el monto resaltado. */
+export type AmountSource = { label: string; before: string; highlight: string; after: string };
+
 type Props = {
   action: (state: FormState, form: FormData) => Promise<FormState>;
   values: ConfirmedFields;
   signingDate: string | null;
   fromPhoto: boolean;
+  source?: AmountSource | null;
 };
 
 const labelClass = "text-xs font-semibold tracking-[0.08em] text-ink-3 uppercase md:text-[13px]";
 
-export function ConfirmForm({ action, values, signingDate, fromPhoto }: Props) {
+export function ConfirmForm({ action, values, signingDate, fromPhoto, source }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const [amountChecked, setAmountChecked] = useState(!fromPhoto);
   const warn = !amountChecked;
@@ -35,16 +39,21 @@ export function ConfirmForm({ action, values, signingDate, fromPhoto }: Props) {
       <div className="flex flex-col items-start gap-4 md:flex-row md:gap-8">
         {fromPhoto && (
           <aside className="flex w-full flex-col gap-2 rounded-xl border border-[#E8D3A2] bg-surface px-4 py-3.5 md:order-2 md:w-[340px] md:shrink-0 md:gap-2.5 md:rounded-[14px] md:border-line-soft md:p-6">
-            <div className="text-[11px] font-bold tracking-[0.08em] text-ink md:text-xs">CLÁUSULA TERCERA · PRECIO</div>
-            <div aria-hidden className="hidden flex-col gap-2.5 md:flex">
-              <div className="h-1.5 w-full rounded-sm bg-[#D3D8DD]" />
-              <div className="h-1.5 w-[88%] rounded-sm bg-[#D3D8DD]" />
-            </div>
-            <div aria-hidden className="my-0.5 h-[11px] w-full rounded bg-[#F6D98A] md:my-1.5 md:h-3.5" />
-            <div aria-hidden className="hidden flex-col gap-2.5 md:flex">
-              <div className="h-1.5 w-[94%] rounded-sm bg-[#D3D8DD]" />
-              <div className="h-1.5 w-[70%] rounded-sm bg-[#D3D8DD]" />
-            </div>
+            {source ? (
+              <>
+                <div className="text-[11px] font-bold tracking-[0.08em] text-ink uppercase md:text-xs">{source.label}</div>
+                <p className="text-sm leading-normal text-ink-2 md:text-[15px]">
+                  {source.before}
+                  {source.highlight && <mark className="rounded bg-[#F6D98A] px-0.5 text-ink">{source.highlight}</mark>}
+                  {source.after}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="text-[11px] font-bold tracking-[0.08em] text-ink md:text-xs">PRECIO</div>
+                <div aria-hidden className="my-0.5 h-[11px] w-full rounded bg-[#F6D98A] md:my-1.5 md:h-3.5" />
+              </>
+            )}
             {notice}
           </aside>
         )}

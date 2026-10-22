@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { startPayment } from "@/app/(app)/analisis/actions";
 import { AutoRefresh } from "@/components/app/auto-refresh";
 import { FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { ProgressSteps } from "@/components/app/progress-steps";
-import { Button } from "@/components/ui/button";
+import { WaitForReading } from "@/components/app/wait-for-reading";
+import { Button, buttonClass } from "@/components/ui/button";
 import { RiskCounts } from "@/components/ui/pill";
 import { Kicker, Title } from "@/components/ui/typography";
 import { loadAnalysis } from "@/lib/analysis/load";
@@ -15,6 +17,16 @@ import { priceCents } from "@/lib/payments/provider";
 // Prototipo 4 · Análisis y pago / móvil 5. Corrección 2 de la spec 03: el
 // re-chequeo es un extra.
 export const metadata: Metadata = { title: "Análisis y pago · Contrato Claro" };
+
+// Por qué falló la lectura (`analyses.error_code`, ver lib/extraction/read.ts).
+const FAILED: Record<string, string> = {
+  empty: "El documento no tiene texto. Probá con el PDF o pegá el texto del contrato.",
+  pdf_without_text: "El PDF parece escaneado y no pudimos leerlo. Probá sacándole fotos desde el celular.",
+  photos_without_text: "No pudimos leer las fotos. Sacalas de nuevo con buena luz y la hoja entera, o subí el PDF.",
+  too_many_pages: "El contrato tiene más de 30 páginas. Subí solo las del contrato, sin anexos.",
+  queue: "No pudimos empezar a leer tu contrato. Probá de nuevo en un rato.",
+  unreadable: "No pudimos abrir el archivo. Probá con otra foto o con el PDF. Si el problema sigue, escribinos.",
+};
 
 export default function Page({ params }: PageProps<"/analisis/[id]/estado">) {
   return (
@@ -33,10 +45,13 @@ async function Status({ params }: Pick<PageProps<"/analisis/[id]/estado">, "para
   if (status === "ready") redirect(`/analisis/${id}/informe`);
 
   const total = preview ? preview.high + preview.attention + preview.none : null;
-  const steps = ["Leyendo el texto", total ? `Detectando ${total} cláusulas` : "Detectando las cláusulas", "Buscando riesgos", "Preparando el informe"];
+  const reading = status === "extracting";
+  const steps = reading
+    ? ["Leyendo el texto", "Detectando las cláusulas", "Buscando los datos clave"]
+    : ["Leyendo el texto", total ? `Detectando ${total} cláusulas` : "Detectando las cláusulas", "Buscando riesgos", "Preparando el informe"];
   const paid = status === "paid" || status === "analyzing";
-  const active = status === "extracting" ? 0 : paid ? 3 : status === "failed" ? 0 : steps.length;
-  const heading = status === "failed" ? "No pudimos leer tu contrato" : paid ? "Preparando tu informe completo" : status === "preview_ready" ? "Tu vista previa está lista" : "Analizando tu contrato";
+  const active = reading ? 0 : paid ? 3 : status === "failed" ? 0 : steps.length;
+  const heading = status === "failed" ? "No pudimos leer tu contrato" : paid ? "Preparando tu informe completo" : status === "preview_ready" ? "Tu vista previa está lista" : "Leyendo tu contrato";
   const payment = await db.payments.latest(id, "analysis");
 
   return (
@@ -45,11 +60,17 @@ async function Status({ params }: Pick<PageProps<"/analisis/[id]/estado">, "para
         <div className="flex flex-col gap-5 md:flex-[1_1_360px] md:gap-[22px]">
           <Title>{heading}</Title>
           {status === "failed" ? (
-            <p className="text-ink-2">Probá con otra foto o con el PDF. Si el problema sigue, escribinos.</p>
+            <>
+              <p className="text-ink-2">{FAILED[analysis.errorCode ?? ""] ?? FAILED.unreadable}</p>
+              <Link href="/analisis/nuevo" className={buttonClass("primary", "self-start")}>
+                Subir otro archivo
+              </Link>
+            </>
           ) : (
             <>
               <ProgressSteps steps={steps} active={active} />
-              {(paid || status === "extracting") && <AutoRefresh />}
+              {paid && <AutoRefresh />}
+              {reading && <WaitForReading id={id} />}
               {active < steps.length && <p className="text-[13px] text-ink-3 md:text-[15px]">No cierres esta pantalla. Suele tardar menos de un minuto.</p>}
             </>
           )}

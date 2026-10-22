@@ -64,3 +64,8 @@ export function analysisCard(a: Analysis, today: string): AnalysisCard {
   };
   return { title, subtitle: `Creado el ${created}`, highlight: false, ...pending[a.status] };
 }
+
+/** «Cláusula 7 · Depósito»; el encabezado del contrato (número 0) va sin número. */
+export function clauseLabel(c: { number: number; title: string }): string {
+  return c.number ? `Cláusula ${c.number} · ${c.title}` : c.title;
+}
