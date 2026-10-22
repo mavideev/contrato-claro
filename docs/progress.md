@@ -6,14 +6,16 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 
 **Para probar a mano:** [guia-de-prueba.md](guia-de-prueba.md), paso a paso.
 
-## Cómo retomar (última actualización: 18/10/2026)
+## Cómo retomar (última actualización: 21/10/2026)
 
-- **Dónde quedamos:** etapa 1 (pagos) terminada con el simulador, probada a mano por la usuaria y con tests en verde. Rama `feat/etapa-1-pagos`; la usuaria hace el PR y el merge a `main`.
-- **Para levantar el entorno:** `make dev` (los datos quedan guardados entre reinicios). App en http://localhost:3000, mails en http://localhost:8025.
+- **Dónde quedamos:** etapa 2 (captura y extracción) hecha con el **simulador de IA**, en la rama `feat/etapa-2-extraccion` (sale de `feat/etapa-1-pagos`, que todavía no está en `main`). PDF, Word y texto se leen de verdad; las fotos y los datos clave pasan por el simulador hasta tener `ANTHROPIC_API_KEY`.
+- **Para levantar el entorno:** `make dev`. En esta Mac el puerto 5432 lo usa otro Postgres: el `.env` tiene `DB_PORT=5433`. App en http://localhost:3000, mails en http://localhost:8025.
 - **Próximos pasos, en orden:**
-  1. Si la usuaria ya tiene la cuenta de Mercado Pago Developers: cargar las credenciales de prueba, levantar un túnel para el webhook y probar el pago real con tarjetas de prueba (ver «Etapa 1» abajo).
-  2. Si no: arrancar la **etapa 2, captura y extracción** (subida real a S3 desde «Subir», lectura de PDF, Word, texto y fotos, y división en cláusulas). Spec: `docs/specs/05-jobs-and-analysis.md`.
-  3. Pendientes sueltos: borrar un análisis suelto, captcha, la función que borra archivos al borrar la cuenta y la pregunta abierta 2 (qué pasa si el análisis falla después de pagar).
+  1. Que la usuaria pruebe la etapa 2 a mano ([guía](guia-de-prueba.md), partes C, F y G) y haga los PR de las etapas 1 y 2.
+  2. Con cuenta de Mercado Pago: credenciales de prueba, túnel y pago real (ver «Etapa 1»).
+  3. Con clave de Anthropic: conectar Claude en `lib/ai/` (fotos, PDF escaneados y datos clave) y sumar contratos reales anonimizados a `evals/`.
+  4. Etapa 3: el informe con IA (checklist, semáforo, citas, PDF).
+  5. Pendientes sueltos: borrar un análisis suelto, captcha, aviso de foto borrosa, regla de vencimiento para subidas abandonadas en S3 y la pregunta abierta 2.
 
 ## Etapas del proyecto
 
@@ -23,7 +25,7 @@ El plan completo está en el [documento base, §9](../documento-base-mvp-v0.2.md
 |---|---|---|
 | 0. Base | repositorio, Docker, base de datos, cuentas, pantallas, webhook, subida a S3, CI | ✅ (falta el primer despliegue en Render, ver [deploy.md](deploy.md)) |
 | 1. Cuentas y pago | Mercado Pago real con webhook | 🟡 todo funciona con el simulador; falta probar con la cuenta de Mercado Pago |
-| 2. Captura y extracción | foto, PDF, Word y texto → cláusulas | ⏳ |
+| 2. Captura y extracción | foto, PDF, Word y texto → cláusulas | 🟡 todo funciona con el simulador de IA; falta conectar Claude para fotos y datos clave |
 | 3. Informe de alquileres | checklist, semáforo, citas, PDF | ⏳ |
 | 4. Re-chequeo | huellas, comparación, certificado | ⏳ |
 | 5. Normativa (RAG) | normas versionadas y búsqueda | ⏳ |
@@ -151,8 +153,36 @@ Mientras no hay cuenta de Mercado Pago, los pagos pasan por un **simulador**: «
 
 **Cuando llegue la cuenta de Mercado Pago:** cargar `MP_ACCESS_TOKEN` (de prueba), `MP_WEBHOOK_SECRET` y los precios en `.env`, levantar un túnel (Mercado Pago necesita una URL pública para el webhook) y repetir la prueba con las tarjetas de prueba.
 
+## Etapa 2 — Captura y extracción (rama `feat/etapa-2-extraccion`)
+
+Mientras no hay clave de Anthropic, la IA pasa por un **simulador** (como el de pagos): las fotos devuelven siempre el contrato de ejemplo y los datos clave salen de reglas simples sobre el texto real. Está prohibido en producción.
+
+| Qué | Estado | Dónde |
+|---|---|---|
+| Subida directa a S3 con URL firmada desde «Subir» (PDF y Word) y desde la cámara (una foto por página, hasta 30) | ✅ | `components/app/upload-client.ts`, `upload-form.tsx`, `scan-screen.tsx`, `prepareUploads` / `startAnalysis` en `app/(app)/analisis/actions.ts` |
+| CORS del bucket local (el navegador sube directo) | ✅ | `scripts/setup-storage.ts`; en R2 se configura a mano ([deploy.md](deploy.md)) |
+| Fotos: se achican (2000 px, JPEG) y se enderezan en el navegador; se puede borrar la última | ✅ | `compressPhoto` |
+| Texto pegado: lo sube el servidor (mínimo 100 caracteres) | ✅ | `startAnalysis` |
+| Job `analysis/uploaded` → `extract-analysis`: lee, divide en cláusulas, saca los datos clave y deja el análisis en «Falta confirmar»; si no se puede leer, `failed` con el motivo | ✅ | `jobs/extract-analysis.ts` |
+| Lectura de PDF (pdf.js vía unpdf) y Word (mammoth) | ✅ | `lib/extraction/read.ts` |
+| División en cláusulas sin IA: PRIMERA:, CLÁUSULA SEGUNDA - PLAZO -, ARTÍCULO 3°, 4.-, encabezado, números de página, palabras cortadas | ✅ | `lib/extraction/clauses.ts` |
+| IA intercambiable: simulador o Claude (según `ANTHROPIC_API_KEY` / `AI_PROVIDER`) | 🟡 simulador listo; Claude pendiente | `lib/ai/` |
+| Fotos y PDF escaneados leídos por la IA | 🟡 con el simulador | `lib/ai/mock.ts` |
+| «Leyendo tu contrato» y, si falla, el motivo y «Subir otro archivo» | ✅ | `/analisis/[id]/estado`, `components/app/wait-for-reading.tsx` |
+| «Confirmar datos»: el aviso de foto sale del documento (ya no de la URL) y muestra la cláusula de donde salió el monto | ✅ | `/analisis/[id]/confirmar` |
+| Vista previa e informe de ejemplo sobre las cláusulas reales (marcan depósito, ajuste y rescisión) | ✅ | `lib/analysis/sample-report.ts` |
+| Borrar los archivos de S3 al borrar la cuenta | ✅ | `jobs/purge-files.ts` |
+| Set de prueba: 5 contratos inventados con los estilos más comunes, leídos como texto, PDF y Word | ✅ | `evals/` |
+| Aviso de foto borrosa con «Repetir foto» | ⏳ | etapa 6 (calidad de fotos) |
+| Contratos reales anonimizados y fotos de tres celulares en el set de prueba | ⏳ | cuando se conecte Claude |
+
+**Tests:** `lib/extraction/extraction.test.ts` (set de prueba y casos borde), `lib/ai/mock.test.ts`. E2E: pegar texto, subir PDF y Word, archivo roto, fotos en mobile.
+
+**Ojo con los tests del seed:** «Firma hoy» usa la fecha del día en que se cargó el seed. Si la base local tiene unos días, fallan los 3 tests que lo buscan (`informe y re-chequeo del seed` y los smoke del seed); con `make reset` vuelven a pasar (borra los datos locales).
+
 ## Pendientes que no son de una parte
 
 - Captcha, Google OAuth probado con credenciales reales.
+- Regla de vencimiento en S3 para subidas que nunca se usaron (se firma la URL y la persona abandona).
 - Borrar un análisis o un contrato suelto (el aviso «Podés borrarlo cuando quieras» hoy se cumple solo borrando la cuenta).
 - Preguntas abiertas: [open-questions.md](open-questions.md).

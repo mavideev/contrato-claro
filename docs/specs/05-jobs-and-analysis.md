@@ -15,7 +15,7 @@ Correr fuera de la petición HTTP todo lo que tarda: lectura de archivos, extrac
 | `analysis/confirmed` | `previewAnalysis` | checklist rápida → conteos por nivel → `preview_ready` | 3 |
 | `analysis/paid` | `runAnalysis` | hallazgos por cláusula (JSON validado con Zod) → `findings` → huellas → PDF → `ready` | 3 |
 | `recheck/uploaded` | `runRecheck` | extraer la versión final → comparar hash y diff por cláusula → certificado | 4 |
-| `user/deleted`, `document/deleted` | `purgeFiles` | borrar objetos de S3 | 0–1 |
+| `account/deleted` | `purgeFiles` | borrar objetos de S3 | 2 |
 
 Cada paso de IA usa `step.run` para que un reintento no repita pasos que ya terminaron. Concurrencia por usuario: 1 análisis a la vez.
 
@@ -46,7 +46,8 @@ Cada paso de IA usa `step.run` para que un reintento no repita pasos que ya term
   - [x] El panel de Inngest local muestra la app registrada.
   - [x] Enviar `test/hello` ejecuta la función y se ve el resultado.
 - Etapa 2:
-  - [ ] Los contratos de muestra se convierten en cláusulas correctas según las métricas de `evals/`.
+  - [x] Los contratos de muestra se convierten en cláusulas correctas según las métricas de `evals/` (5 contratos inventados, como texto, PDF y Word).
+  - [ ] Lo mismo con contratos reales anonimizados y fotos, con Claude conectado.
 - Etapa 3:
   - [ ] El informe del set de prueba alcanza las métricas base, y todo hallazgo cita su cláusula.
 - Etapa 4:

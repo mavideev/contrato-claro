@@ -60,8 +60,8 @@ Tocá **Mis análisis** (arriba a la derecha).
 Seguí con la cuenta nueva de la parte B.
 
 **C1. Subir un contrato**
-Tocá **Subir mi primer contrato**, elegí **Pegar texto**, escribí cualquier cosa y tocá **Analizar contrato**.
-✔️ Aparece «Confirmá los datos clave» con los campos completos (son datos de ejemplo).
+Tocá **Subir mi primer contrato**, elegí **Pegar texto** y pegá un contrato de alquiler. Si no tenés uno a mano, abrí el archivo `evals/contratos/01-ordinales.txt` del proyecto y copiá todo. Tocá **Analizar contrato**.
+✔️ Aparece «Leyendo tu contrato» unos segundos y después «Confirmá los datos clave», con los datos sacados del texto (por ejemplo, Valor inicial «$ 450.000»).
 
 **C2. Confirmar**
 Cambiá el **Inmueble** por una dirección cualquiera y tocá **Confirmar y analizar**.
@@ -90,6 +90,16 @@ Entrá a **Pagos** desde el menú.
 **C8. Pago pendiente y rechazado (opcional)**
 Subí otro contrato y repetí C1 a C3, pero tocá **Dejarlo pendiente**.
 ✔️ Aparece «Tu pago está pendiente». Si volvés a pagar y tocás **Rechazarlo**: «El pago fue rechazado», con el botón para probar de nuevo.
+
+---
+
+## Parte G — Subir un PDF o un Word (etapa 2)
+
+**G1.** En **Nuevo análisis**, dejá **Subir PDF o Word**, elegí un contrato en PDF o Word y tocá **Analizar contrato**.
+✔️ Después de «Leyendo tu contrato», los datos clave salen de tu archivo. Los que el contrato no dice quedan vacíos.
+
+**G2.** Probá con un archivo que no sea un contrato (por ejemplo, una imagen renombrada a `.pdf`).
+✔️ Aparece «No pudimos leer tu contrato» con el motivo y el botón **Subir otro archivo**.
 
 ---
 
@@ -123,17 +133,17 @@ Entrá a **Cuenta**, marcá la casilla «Entiendo que se borran…» y tocá **B
 En el navegador de la computadora: Cmd+Opt+I y después Cmd+Shift+M, y elegí un ancho de unos 390.
 
 **F1.** ✔️ El menú pasa a estar abajo (Análisis, Pagos, Cuenta).
-**F2.** En «Nuevo análisis» aparece **Sacar foto**. Tocá **Abrir cámara**, después el botón redondo dos veces y **Listo (2)**.
-✔️ En «Confirmá los datos clave», el «Valor inicial» está en amarillo con «Revisá», y cambia a «Confirmado» cuando lo editás.
+**F2.** En «Nuevo análisis» aparece **Sacar foto**. Tocá **Abrir cámara** y después el botón redondo. En la computadora se abre para elegir un archivo: elegí cualquier foto. Repetilo para tener 2 páginas y tocá **Listo (2)**.
+✔️ En «Confirmá los datos clave», el «Valor inicial» está en amarillo con «Revisá», al costado se ve la cláusula de donde salió el monto, y cambia a «Confirmado» cuando lo editás.
 
 ---
 
 ## Qué todavía no es real
 
-- **Subir un contrato** carga datos de ejemplo: todavía no se lee tu archivo (etapa 2).
-- **El informe** es de ejemplo: el análisis con IA llega en la etapa 3.
+- **Las fotos** no se leen todavía: hasta conectar Claude, el **simulador de IA** devuelve siempre un contrato de ejemplo. El PDF, el Word y el texto pegado sí se leen de verdad.
+- **Los datos clave** salen de reglas simples (simulador de IA): Claude los va a leer mejor.
+- **El informe** es de ejemplo, pero ya usa las cláusulas de tu contrato: el análisis con IA llega en la etapa 3.
 - **El pago** usa el simulador hasta que esté la cuenta de Mercado Pago.
-- **La cámara** es una maqueta.
 - **Descargar el PDF** y **el certificado** están deshabilitados.
 
 El estado de cada etapa está en [progress.md](progress.md).
