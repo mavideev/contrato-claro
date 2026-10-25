@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
+import { anthropicAi } from "./anthropic";
 import { mockAi } from "./mock";
 import type { AiProvider } from "./types";
 
@@ -12,5 +13,5 @@ export function aiProvider(): AiProvider {
     if (e.NODE_ENV === "production") throw new Error("El simulador de IA no se puede usar en producción");
     return mockAi;
   }
-  throw new Error("Claude todavía no está conectado: usá AI_PROVIDER=mock");
+  return anthropicAi;
 }

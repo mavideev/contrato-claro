@@ -12,11 +12,8 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 
 - **Etapa 2** (captura y extracción) terminada y probada a mano por la usuaria: texto pegado, informe y PDF. Falta probar las fotos ([guía](guia-de-prueba.md), parte F).
 - **Mercado Pago:** la usuaria ya tiene la aplicación (Checkout Pro, API de Preferences) y su Access Token de prueba. Se decidió **no** usar túnel en local: el webhook se prueba directo en el primer despliegue.
-- **En curso: preparar el primer despliegue** en Render ([deploy.md](deploy.md), ya actualizado a la etapa 2).
-- **Decisión pendiente de la usuaria** antes de desplegar: en producción los simuladores están prohibidos, así que sin Claude conectado subir un contrato falla.
-  - A) esperar la clave de Anthropic, conectar Claude en `lib/ai/` y después desplegar, o
-  - B) desplegar ya (cuentas y mails andan; subir contratos falla hasta conectar Claude).
-  La usuaria dijo que va a pasar la clave de Claude en breve.
+- **Claude conectado:** `lib/ai/anthropic.ts` implementa `AiProvider` (fotos y PDF escaneado con bloques de imagen/documento, datos clave con salida estructurada validada con Zod). Modelo: `claude-haiku-4-5` (elegido por la usuaria, por costo). Sin probar todavía con contratos ni fotos reales — se prueba directo en el despliegue, no en local.
+- **Primer despliegue en Render: en curso**, probado por la usuaria directamente ahí (no en local). Hasta ahora: Web Service con su URL, Postgres y storage (S3-compatible, con `S3_FORCE_PATH_STYLE=true`) respondiendo ok en `/api/health`, Inngest Cloud sincronizado, webhook de Mercado Pago configurado. Checklist de variables en [render-env.md](render-env.md). Falta probar el flujo completo (subir contrato → pagar → informe) ahora que Claude está conectado.
 
 ### Ramas
 
