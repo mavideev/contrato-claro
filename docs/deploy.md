@@ -2,7 +2,9 @@
 
 Guía para publicar Contrato Claro. Está pensada para seguirla en orden. Lo marcado con ⚠️ hay que revisarlo sí o sí.
 
-> **Estado de la app:** etapa 0. Las pantallas funcionan, pero todavía no hay extracción, análisis ni cobros reales: al subir un contrato se cargan datos de ejemplo y el pago queda «pendiente». Publicarla hoy sirve como **demo**, no para usuarios reales. Ver [«Antes de abrir a usuarios reales»](#antes-de-abrir-a-usuarios-reales).
+> **Estado de la app:** etapa 2. Se suben y se leen PDF, Word y texto, y el cobro va por Mercado Pago (con credenciales de prueba). Las fotos y los datos clave necesitan Claude (`ANTHROPIC_API_KEY`), y el informe todavía es de ejemplo (etapa 3). Publicarla hoy sirve como **demo**, no para usuarios reales. Ver [«Antes de abrir a usuarios reales»](#antes-de-abrir-a-usuarios-reales).
+>
+> ⚠️ Los simuladores de pago y de IA están prohibidos en producción. Sin `MP_ACCESS_TOKEN`, «Pagar» falla; sin `ANTHROPIC_API_KEY` (y Claude conectado en `lib/ai/`), la lectura del contrato falla.
 
 ## 1. Qué se necesita
 
@@ -13,7 +15,8 @@ Guía para publicar Contrato Claro. Está pensada para seguirla en orden. Lo mar
 | Archivos | **Cloudflare R2** (compatible con S3) | contratos subidos, certificados |
 | Mails | **Resend** | verificación, link mágico, recuperar contraseña |
 | Jobs | **Inngest Cloud** | tareas en segundo plano (análisis, borrados) |
-| Pagos | **Mercado Pago** (Checkout Pro) | etapa 1; hoy solo el webhook |
+| Pagos | **Mercado Pago** (Checkout Pro) | cobro y webhook |
+| IA | **Anthropic** (Claude) | leer fotos y sacar los datos clave |
 | Login con Google | Google Cloud Console | opcional |
 
 ## 2. Base de datos (Render Postgres)
@@ -33,14 +36,14 @@ Guía para publicar Contrato Claro. Está pensada para seguirla en orden. Lo mar
    [
      {
        "AllowedOrigins": ["https://TU-DOMINIO"],
-       "AllowedMethods": ["PUT", "GET", "HEAD"],
-       "AllowedHeaders": ["content-type", "content-length"],
+       "AllowedMethods": ["PUT"],
+       "AllowedHeaders": ["content-type"],
        "MaxAgeSeconds": 3600
      }
    ]
    ```
 
-   (La pantalla «Subir» empieza a usar la subida real en la etapa 2, pero conviene dejarlo listo.)
+   Sin esto, «Analizar contrato» y la cámara responden «No pudimos subir el archivo». En local lo aplica `scripts/setup-storage.ts`.
 
 ## 4. Mails (Resend)
 
@@ -54,7 +57,7 @@ Si `RESEND_API_KEY` está definida, la app usa Resend; si no, intenta SMTP (`SMT
 
 1. Crear la app en Inngest Cloud y copiar **Event Key** y **Signing Key**.
 2. ⚠️ Sin `INNGEST_SIGNING_KEY`, `/api/inngest` responde 500 (comprobado con la imagen de producción).
-3. Después del primer deploy, en Inngest: **Sync app** con la URL `https://TU-DOMINIO/api/inngest`. Tiene que aparecer la función `hello`.
+3. Después del primer deploy, en Inngest: **Sync app** con la URL `https://TU-DOMINIO/api/inngest`. Tienen que aparecer las funciones `hello`, `extract-analysis`, `analysis-paid` y `purge-files`.
 4. No definir `INNGEST_DEV` en producción.
 
 ## 6. Web Service (Render)
@@ -106,7 +109,8 @@ Se cargan en Render → Environment. Ninguna va en el repositorio. La validació
 | `PRICE_ANALYSIS_ARS` / `PRICE_RECHECK_ARS` | sí, para cobrar | precios en pesos, enteros. Con 0 (default) se muestra [PRECIO] y Mercado Pago no acepta el cobro. |
 | `PAYMENTS_PROVIDER` | no | no definir en producción (`mock` está prohibido) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | no | si están las dos aparece «Continuar con Google» |
-| `ANTHROPIC_API_KEY` | etapa 2 | todavía no se usa |
+| `ANTHROPIC_API_KEY` | sí, para leer contratos | clave de Anthropic. ⚠️ Sin ella la lectura falla: el simulador de IA está prohibido en producción. |
+| `AI_PROVIDER` | no | no definir en producción (`mock` está prohibido) |
 
 No hace falta definir `NODE_ENV`, `PORT` ni `HOSTNAME`: los fija la imagen. No definir `SMTP_HOST` ni `INNGEST_DEV` en producción.
 
@@ -123,9 +127,11 @@ Una vez que la app tiene su URL:
 1. `https://TU-DOMINIO/api/health` → `{"status":"ok","db":"ok","storage":"ok"}`.
 2. Crear una cuenta con un email real: llega el mail (Resend → Logs) y el link entra a «Subí tu contrato».
 3. «Recibir un link por email» y «¿Olvidaste tu contraseña?» también llegan.
-4. Inngest Cloud muestra la app sincronizada con la función `hello`.
-5. `/analisis` sin sesión redirige a `/ingresar`.
-6. ⚠️ **IP de los visitantes (límite de intentos).** Better Auth toma la IP de `x-forwarded-for` y, si el header trae más de una IP (cliente + proxies), la descarta. Después de ingresar, revisar en la base:
+4. Inngest Cloud muestra la app sincronizada con sus 4 funciones.
+5. Subir un PDF de prueba: pasa por «Leyendo tu contrato» y llega a «Confirmá los datos clave» (en Inngest se ve `extract-analysis` terminada).
+6. Pagar con una tarjeta de prueba de Mercado Pago: en Mercado Pago Developers → Webhooks se ve el aviso con respuesta 200 y en la app se desbloquea el informe.
+7. `/analisis` sin sesión redirige a `/ingresar`.
+8. ⚠️ **IP de los visitantes (límite de intentos).** Better Auth toma la IP de `x-forwarded-for` y, si el header trae más de una IP (cliente + proxies), la descarta. Después de ingresar, revisar en la base:
    `select ip_address from session order by created_at desc limit 5;`
    Si aparece vacío, el límite de intentos no está funcionando: hay que configurar `advanced.ipAddress` en `lib/auth/index.ts` (`trustedProxies` con los rangos del proxy de Render, o el header que corresponda) y volver a probar.
 
@@ -134,11 +140,11 @@ Una vez que la app tiene su URL:
 Nada de esto bloquea publicar una demo, pero sí recibir usuarios:
 
 - [ ] Cobro con Mercado Pago probado con credenciales de prueba y después reales (hoy probado con el simulador).
-- [ ] Etapas 2 a 4: extracción, análisis e informe reales. Hoy el informe es de ejemplo.
+- [ ] Claude conectado (fotos y datos clave) y etapas 3 y 4: análisis e informe reales. Hoy el informe es de ejemplo.
 - [ ] Postgres en plan pago y región de los datos revisada con el abogado ([preguntas abiertas](open-questions.md)).
 - [ ] Captcha (Turnstile) en registro y envío de links (spec 02).
-- [ ] Verificar la IP detrás del proxy (paso 9.6).
-- [ ] Función de Inngest que borre los archivos al borrar una cuenta (hoy el evento `account/deleted` se envía, pero nadie lo procesa).
+- [ ] Verificar la IP detrás del proxy (paso 9.8).
+- [ ] Regla de vencimiento en R2 para subidas abandonadas (`users/*/uploads/` sin análisis).
 - [ ] Borrar un análisis suelto (hoy solo se puede borrando la cuenta).
 - [ ] Precios definidos (`[PRECIO]` en la interfaz).
 - [ ] Términos y política de privacidad (el registro los menciona pero no hay páginas).
