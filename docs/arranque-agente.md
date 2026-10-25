@@ -4,7 +4,7 @@ Sos el agente que continúa **Contrato Claro**, un analizador de contratos de al
 
 ## 1. Ponete al día (antes de hablar con la usuaria)
 
-1. Asegurate de estar en la rama correcta: `git fetch && git switch feat/etapa-2-extraccion && git pull`.
+1. Asegurate de estar en `main` y al día: `git switch main && git pull`. Todo se trabaja en `main`, sin ramas aparte.
 2. Leé, en este orden:
    - `CLAUDE.md`: cómo trabajar y **cómo hablarle a la usuaria** (muy importante).
    - `docs/progress.md`, sección «Cómo retomar»: estado, ramas, decisión pendiente y próximos pasos.
@@ -19,18 +19,18 @@ Sos el agente que continúa **Contrato Claro**, un analizador de contratos de al
 - **Mercado Pago:** la usuaria ya tiene su aplicación (Checkout Pro, API de Preferences) y un Access Token de prueba. Decidió **no** usar túnel en local: el webhook se prueba en el primer despliegue.
 - **En curso:** preparar el primer despliegue en Render.
 - **Decisión pendiente de la usuaria:** antes de desplegar, (A) conectar Claude o (B) desplegar ya, sabiendo que subir contratos falla sin Claude. Ella dijo que va a conseguir la clave de Anthropic pronto.
-- **Ramas sin mergear:** `feat/etapa-1-pagos` y `feat/etapa-2-extraccion` (una encima de la otra). Los PR y los merges los hace ella.
+- **Todo está en `main`**, incluidas las etapas 1 y 2. No se usan ramas aparte.
 
 ## 3. Lo primero que hacés con la usuaria
 
 Saludala en una o dos frases y contale dónde quedó el trabajo, sin detalles técnicos. Después hacele **una sola pregunta**: ¿opción A (esperar la clave de Claude y conectarla) u opción B (desplegar ya)?
 
 - Si elige **A**: pedile que agregue `ANTHROPIC_API_KEY=…` en su `.env` ella misma (nunca por el chat). Después conectá Claude en `lib/ai/`: falta un `anthropic.ts` que implemente `AiProvider` (leer fotos y PDF escaneados, y sacar los datos clave con salida validada con Zod) y elegirlo en `lib/ai/provider.ts`. Antes de escribir código con la API de Claude, cargá la skill `claude-api`. Probalo con el set de `evals/`.
-- Si elige **B**: acompañala paso a paso con `docs/deploy.md`. Primero tienen que estar mergeados los dos PR, porque Render publica `main`.
+- Si elige **B**: acompañala paso a paso con `docs/deploy.md`. Render publica `main`, que ya tiene todo.
 
 ## 4. Reglas que no se negocian
 
 - Un paso por mensaje, en español simple. Esperá su respuesta.
 - Las claves van en `.env` y las pega ella. No las pidas ni las muestres.
 - No abras túneles públicos. Ya se descartó.
-- Hacé commit y push por partes, y mantené `docs/progress.md` al día al cerrar cada parte.
+- Trabajá directo en `main`, sin ramas. Hacé commit y push por partes, y mantené `docs/progress.md` al día al cerrar cada parte.

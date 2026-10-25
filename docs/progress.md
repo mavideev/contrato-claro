@@ -20,17 +20,12 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 
 ### Ramas
 
-`main` tiene la etapa 0. Las etapas 1 y 2 están en ramas sin merge, una encima de la otra:
-
-1. `feat/etapa-1-pagos` → PR a `main`.
-2. `feat/etapa-2-extraccion` (sale de la anterior) → PR a `main` después del primero.
-
-Render publica `main`: los dos PR tienen que estar mergeados antes del despliegue. Los PR y los merges los hace la usuaria.
+Todo está en `main` (etapas 0, 1 y 2) y se trabaja directo ahí, sin ramas aparte. Render publica `main`.
 
 ### Para seguir en otra máquina
 
 1. Instalar **Docker Desktop** y **Node 22** (`.nvmrc`) con **pnpm** (`corepack enable`).
-2. `git clone https://github.com/mavideev/contrato-claro.git`, `cd contrato-claro` y `git switch feat/etapa-2-extraccion`.
+2. `git clone https://github.com/mavideev/contrato-claro.git` y `cd contrato-claro` (queda en `main`).
 3. `pnpm install` (para los tests y el editor; la app corre en Docker).
 4. Crear el archivo `.env` en la raíz. **No está en el repositorio** (tiene claves): hay que volver a cargarlas desde cada panel.
 
@@ -47,7 +42,7 @@ Render publica `main`: los dos PR tienen que estar mergeados antes del despliegu
 
 ### Próximos pasos, en orden
 
-1. Que la usuaria elija A o B (arriba) y haga los PR de las etapas 1 y 2.
+1. Que la usuaria elija A o B (arriba).
 2. Si es A: conectar Claude en `lib/ai/` (un `anthropic.ts` que implemente `AiProvider`: leer fotos y PDF escaneados, y sacar los datos clave con salida validada con Zod), probarlo con el set de `evals/` y con fotos reales.
 3. Primer despliegue siguiendo [deploy.md](deploy.md), en este orden: Render Postgres → Cloudflare R2 (con CORS) → Resend (dominio verificado) → Inngest Cloud → Web Service de Render con las variables → Webhook de Mercado Pago apuntando a `https://TU-DOMINIO/api/webhooks/mercadopago` (su clave secreta va en `MP_WEBHOOK_SECRET`) → verificación (paso 9).
 4. Etapa 3: el informe con IA (checklist, semáforo, citas, PDF).

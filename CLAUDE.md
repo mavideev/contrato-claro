@@ -12,7 +12,7 @@ Analizador de contratos de alquiler (Argentina). Next.js + Postgres + S3 + Innge
 
 ## Cómo trabajar
 
-- Cada etapa en su rama (`feat/etapa-N-…`), con commit + push por partes. Los PR y los merges a `main` los hace la usuaria.
+- Todo se trabaja directo en `main`, sin ramas aparte (lo pidió la usuaria). Commit + push por partes.
 - Al cerrar una parte, actualizar `docs/progress.md` y, si cambia algo que se prueba a mano, `docs/guia-de-prueba.md`. Lo que afecte a producción va en `docs/deploy.md`.
 - Las specs están en `docs/specs/`; el plan general, en `documento-base-mvp-v0.2.md`.
 - Tests: `pnpm test` (vitest, necesita el entorno levantado) y `pnpm e2e` (Playwright). Antes de dar algo por terminado: `pnpm lint`, `pnpm typecheck` y los tests.
