@@ -69,13 +69,10 @@ Si `RESEND_API_KEY` está definida, la app usa Resend; si no, intenta SMTP (`SMT
 | Etapa del Dockerfile | Docker construye la **última** etapa, que es `runner` (la de producción). ⚠️ Si se agregan etapas al `Dockerfile`, `runner` tiene que seguir siendo la última. |
 | Puerto | `3000` (la imagen ya define `PORT=3000`) |
 | Health check path | `/api/health` |
-| **Pre-Deploy Command** | `node migrate.mjs` |
 | Auto-deploy | desde la rama `main` |
 
-- **Health check:** `/api/health` comprueba la base **y** el bucket. Si R2 está mal configurado responde 503 y Render no da el deploy por bueno. Es intencional.
-- **Migraciones:** la imagen trae `migrate.mjs` y `db/migrations/`. El Pre-Deploy Command las aplica antes de cada versión nueva; si fallan, el deploy se cancela y queda la versión anterior. Se probó sobre una base vacía: crea las 18 tablas y la extensión `vector`.
-  - Si el plan no tiene Pre-Deploy Command, correrlas a mano desde tu máquina antes de publicar:
-    `DATABASE_URL="<External Database URL>" pnpm db:migrate`
+- **Health check:** `/api/health` comprueba la base, el bucket y (si está conectado) Claude. Si algo está mal configurado responde 503 y Render no da el deploy por bueno. Es intencional.
+- **Migraciones:** automáticas, no dependen de ningún plan pago. El contenedor las corre al arrancar, antes de levantar el servidor (`CMD` del `Dockerfile`: `node migrate.mjs && node server.js`). Si fallan, el contenedor no arranca y Render mantiene la versión anterior corriendo. Se probó sobre una base vacía: crea las 18 tablas y la extensión `vector`.
 - ⚠️ **Nunca** correr `pnpm db:seed` ni `pnpm bootstrap` contra la base de producción: crean los usuarios demo con contraseñas conocidas. El seed solo se frena si `NODE_ENV=production`, y en tu máquina no lo es.
 
 ### Probar la imagen antes de subirla (opcional)

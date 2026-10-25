@@ -21,8 +21,7 @@ CMD ["pnpm", "dev", "--hostname", "0.0.0.0", "--port", "3000"]
 FROM deps AS builder
 COPY . .
 RUN pnpm build
-# Migraciones en un solo archivo JS, para correrlas desde la imagen de producción
-# (Render: Pre-Deploy Command `node migrate.mjs`).
+# Migraciones en un solo archivo JS: el runner las corre al arrancar, antes del servidor.
 RUN pnpm exec esbuild scripts/migrate.ts --bundle --platform=node --format=esm --outfile=dist/migrate.mjs
 
 FROM node:22-alpine AS runner
@@ -39,4 +38,4 @@ COPY --from=builder --chown=nextjs:nodejs /app/dist/migrate.mjs ./migrate.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/db/migrations ./db/migrations
 USER nextjs
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "node migrate.mjs && node server.js"]
