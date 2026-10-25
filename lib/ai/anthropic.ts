@@ -7,7 +7,7 @@ import { ExtractionError } from "@/lib/extraction/read";
 import type { Clause } from "@/lib/extraction/clauses";
 import type { AiProvider, PageImage } from "./types";
 
-const MODEL = "claude-haiku-4-5";
+const MODEL = "claude-haiku-5-5";
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
 type SupportedImageType = (typeof SUPPORTED_IMAGE_TYPES)[number];
 
