@@ -39,7 +39,8 @@ export function mercadoPagoProvider(opts: { accessToken: string; appUrl: string;
     name: "mercadopago",
     async createCheckout({ paymentId, title, amountCents, payerEmail, returnUrl }) {
       if (amountCents <= 0) throw new Error("Falta el precio (PRICE_ANALYSIS_ARS / PRICE_RECHECK_ARS)");
-      // Mercado Pago solo acepta notification_url públicas (https): en local se usa el túnel.
+      // Mercado Pago solo acepta notification_url públicas (https). En local, el
+      // webhook se configura en el panel de la aplicación con la URL del túnel.
       const publicUrl = opts.appUrl.startsWith("https://");
       const pref = await call("/checkout/preferences", {
         method: "POST",
@@ -49,7 +50,8 @@ export function mercadoPagoProvider(opts: { accessToken: string; appUrl: string;
           payer: { email: payerEmail },
           external_reference: paymentId,
           back_urls: { success: returnUrl, pending: returnUrl, failure: returnUrl },
-          auto_return: "approved",
+          // auto_return exige back_urls https: en local se vuelve con «Volver al sitio».
+          ...(returnUrl.startsWith("https://") ? { auto_return: "approved" } : {}),
           ...(publicUrl ? { notification_url: `${opts.appUrl}/api/webhooks/mercadopago` } : {}),
         }),
       });

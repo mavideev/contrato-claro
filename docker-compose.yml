@@ -105,6 +105,14 @@ services:
     ports: ["8080:8080"]
     depends_on: [db]
 
+
+  # Túnel público para recibir el webhook de Mercado Pago en local (`make tunnel`).
+  # La URL (https://….trycloudflare.com) cambia cada vez que se levanta.
+  tunnel:
+    image: cloudflare/cloudflared:2026.9.3
+    profiles: [tunnel]
+    command: ["tunnel", "--no-autoupdate", "--url", "http://app:3000"]
+    depends_on: [app]
 volumes:
   db-data:
   storage-data:
