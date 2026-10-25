@@ -6,16 +6,52 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 
 **Para probar a mano:** [guia-de-prueba.md](guia-de-prueba.md), paso a paso.
 
-## Cómo retomar (última actualización: 21/10/2026)
+## Cómo retomar (última actualización: 25/10/2026)
 
-- **Dónde quedamos:** etapa 2 (captura y extracción) hecha con el **simulador de IA**, en la rama `feat/etapa-2-extraccion` (sale de `feat/etapa-1-pagos`, que todavía no está en `main`). PDF, Word y texto se leen de verdad; las fotos y los datos clave pasan por el simulador hasta tener `ANTHROPIC_API_KEY`.
-- **Para levantar el entorno:** `make dev`. En esta Mac el puerto 5432 lo usa otro Postgres: el `.env` tiene `DB_PORT=5433`. App en http://localhost:3000, mails en http://localhost:8025.
-- **Próximos pasos, en orden:**
-  1. Que la usuaria pruebe la etapa 2 a mano ([guía](guia-de-prueba.md), partes C, F y G) y haga los PR de las etapas 1 y 2.
-  2. Con cuenta de Mercado Pago: credenciales de prueba, túnel y pago real (ver «Etapa 1»).
-  3. Con clave de Anthropic: conectar Claude en `lib/ai/` (fotos, PDF escaneados y datos clave) y sumar contratos reales anonimizados a `evals/`.
-  4. Etapa 3: el informe con IA (checklist, semáforo, citas, PDF).
-  5. Pendientes sueltos: borrar un análisis suelto, captcha, aviso de foto borrosa, regla de vencimiento para subidas abandonadas en S3 y la pregunta abierta 2.
+### Dónde quedamos
+
+- **Etapa 2** (captura y extracción) terminada y probada a mano por la usuaria: texto pegado, informe y PDF. Falta probar las fotos ([guía](guia-de-prueba.md), parte F).
+- **Mercado Pago:** la usuaria ya tiene la aplicación (Checkout Pro, API de Preferences) y su Access Token de prueba. Se decidió **no** usar túnel en local: el webhook se prueba directo en el primer despliegue.
+- **En curso: preparar el primer despliegue** en Render ([deploy.md](deploy.md), ya actualizado a la etapa 2).
+- **Decisión pendiente de la usuaria** antes de desplegar: en producción los simuladores están prohibidos, así que sin Claude conectado subir un contrato falla.
+  - A) esperar la clave de Anthropic, conectar Claude en `lib/ai/` y después desplegar, o
+  - B) desplegar ya (cuentas y mails andan; subir contratos falla hasta conectar Claude).
+  La usuaria dijo que va a pasar la clave de Claude en breve.
+
+### Ramas
+
+`main` tiene la etapa 0. Las etapas 1 y 2 están en ramas sin merge, una encima de la otra:
+
+1. `feat/etapa-1-pagos` → PR a `main`.
+2. `feat/etapa-2-extraccion` (sale de la anterior) → PR a `main` después del primero.
+
+Render publica `main`: los dos PR tienen que estar mergeados antes del despliegue. Los PR y los merges los hace la usuaria.
+
+### Para seguir en otra máquina
+
+1. Instalar **Docker Desktop** y **Node 22** (`.nvmrc`) con **pnpm** (`corepack enable`).
+2. `git clone https://github.com/mavideev/contrato-claro.git`, `cd contrato-claro` y `git switch feat/etapa-2-extraccion`.
+3. `pnpm install` (para los tests y el editor; la app corre en Docker).
+4. Crear el archivo `.env` en la raíz. **No está en el repositorio** (tiene claves): hay que volver a cargarlas desde cada panel.
+
+   | Variable | De dónde sale | ¿Hace falta? |
+   |---|---|---|
+   | `MP_ACCESS_TOKEN` | Mercado Pago Developers → tu aplicación → Credenciales de prueba → Access Token | para pagar con Mercado Pago; sin ella, usa el simulador |
+   | `PRICE_ANALYSIS_ARS=1000` y `PRICE_RECHECK_ARS=500` | precios de prueba (Mercado Pago no acepta $0) | junto con el token |
+   | `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys | ⚠️ todavía no: hasta conectar Claude en `lib/ai/`, con esta línea la lectura falla. Sin ella usa el simulador de IA |
+   | `DB_PORT=5433` | solo si el puerto 5432 está ocupado (en la Mac anterior había otro Postgres) | no, salvo ese caso |
+
+   ⚠️ En local, con `MP_ACCESS_TOKEN` el pago va a Mercado Pago de verdad, pero el aviso (webhook) no llega sin túnel y el pago queda «pendiente». Para probar todo el flujo en local, dejar esa línea comentada (`# MP_ACCESS_TOKEN=…`) y se usa el simulador.
+5. `make dev` y abrir http://localhost:3000 (usuario demo: `demo@contratoclaro.local` / `demo12345`). Mails en http://localhost:8025.
+6. Comprobar: `pnpm test` (todo en verde) y `pnpm e2e`.
+
+### Próximos pasos, en orden
+
+1. Que la usuaria elija A o B (arriba) y haga los PR de las etapas 1 y 2.
+2. Si es A: conectar Claude en `lib/ai/` (un `anthropic.ts` que implemente `AiProvider`: leer fotos y PDF escaneados, y sacar los datos clave con salida validada con Zod), probarlo con el set de `evals/` y con fotos reales.
+3. Primer despliegue siguiendo [deploy.md](deploy.md), en este orden: Render Postgres → Cloudflare R2 (con CORS) → Resend (dominio verificado) → Inngest Cloud → Web Service de Render con las variables → Webhook de Mercado Pago apuntando a `https://TU-DOMINIO/api/webhooks/mercadopago` (su clave secreta va en `MP_WEBHOOK_SECRET`) → verificación (paso 9).
+4. Etapa 3: el informe con IA (checklist, semáforo, citas, PDF).
+5. Pendientes sueltos: borrar un análisis suelto, captcha, aviso de foto borrosa, regla de vencimiento para subidas abandonadas en S3 y la pregunta abierta 2.
 
 ## Etapas del proyecto
 
