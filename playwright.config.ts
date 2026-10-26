@@ -5,6 +5,11 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
+  // Un solo servidor de Next.js en modo dev para todo el run: con más de un
+  // worker, dos tests pueden pedir rutas nunca compiladas al mismo tiempo y
+  // saturar el compilador (se vio "Compiling..." todavía a los 90s en CI).
+  // Localmente no hace falta: cada test corre contra sus propias rutas de a una.
+  workers: process.env.CI ? 1 : undefined,
   // El dev server compila cada ruta la primera vez: margen para eso (una ruta
   // nunca visitada puede tardar bastante más de 10s en CI).
   expect: { timeout: 30_000 },
