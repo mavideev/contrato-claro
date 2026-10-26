@@ -13,8 +13,9 @@ export default defineConfig({
   // El dev server compila cada ruta la primera vez: margen para eso (una ruta
   // nunca visitada puede tardar bastante más de 10s en CI).
   expect: { timeout: 30_000 },
-  // Los registros pueden esperar al rate limit (ver e2e/helpers.ts).
-  timeout: 90_000,
+  // Los registros pueden esperar al rate limit (ver e2e/helpers.ts), y algún
+  // test espera 60s una compilación en frío: margen por encima de eso.
+  timeout: 150_000,
   reporter: process.env.CI ? "github" : "list",
   use: { baseURL: process.env.BASE_URL ?? "http://localhost:3000", trace: "retain-on-failure" },
   projects: [

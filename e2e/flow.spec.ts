@@ -59,10 +59,12 @@ test.describe("con un usuario nuevo", () => {
       .fill("2026-11-02");
     await page.getByRole("button", { name: "Confirmar y analizar" }).click();
 
-    await expect(page).toHaveURL(/\/estado$/);
+    // Primera visita a /estado: el server de desarrollo la compila ahí mismo,
+    // puede tardar bastante más que el resto de las rutas (más margen acá).
+    await expect(page).toHaveURL(/\/estado$/, { timeout: 60_000 });
     await expect(
       page.getByRole("heading", { name: "Tu vista previa está lista" }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 60_000 });
     await expect(
       page.getByText("extra, lo comprás cuando lo necesites"),
     ).toBeVisible();
@@ -89,7 +91,8 @@ test.describe("con un usuario nuevo", () => {
     await signUpAndVerify(page, request);
     await pasteContract(page);
     await page.getByRole("button", { name: "Confirmar y analizar" }).click();
-    await expect(page).toHaveURL(/\/estado$/);
+    // Primera visita a /estado: el server de desarrollo la compila ahí mismo.
+    await expect(page).toHaveURL(/\/estado$/, { timeout: 60_000 });
     await page.getByRole("button", { name: "Pagar con Mercado Pago" }).click();
 
     await page.getByRole("button", { name: "Aprobar el pago" }).click();
