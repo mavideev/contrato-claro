@@ -89,6 +89,7 @@ test.describe("con un usuario nuevo", () => {
     await signUpAndVerify(page, request);
     await pasteContract(page);
     await page.getByRole("button", { name: "Confirmar y analizar" }).click();
+    await expect(page).toHaveURL(/\/estado$/);
     await page.getByRole("button", { name: "Pagar con Mercado Pago" }).click();
 
     await page.getByRole("button", { name: "Aprobar el pago" }).click();
