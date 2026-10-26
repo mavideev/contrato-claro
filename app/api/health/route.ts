@@ -44,6 +44,14 @@ function paymentsCheck(): Check | "skipped" {
   return env().MP_WEBHOOK_SECRET ? "ok" : "error";
 }
 
+// "test" o "live", según el prefijo del token (nunca el valor). `undefined`
+// si no hay Mercado Pago configurado.
+function paymentsMode(): "test" | "live" | undefined {
+  const token = env().MP_ACCESS_TOKEN;
+  if (!token) return undefined;
+  return token.startsWith("TEST-") ? "test" : "live";
+}
+
 // Health check de Render y del compose: base, almacenamiento, IA y pagos.
 export async function GET() {
   await connection();
@@ -54,5 +62,5 @@ export async function GET() {
   ]);
   const payments = paymentsCheck();
   const ok = db === "ok" && storage === "ok" && ai !== "error" && payments !== "error";
-  return Response.json({ status: ok ? "ok" : "error", db, storage, ai, payments }, { status: ok ? 200 : 503 });
+  return Response.json({ status: ok ? "ok" : "error", db, storage, ai, payments, paymentsMode: paymentsMode() }, { status: ok ? 200 : 503 });
 }
