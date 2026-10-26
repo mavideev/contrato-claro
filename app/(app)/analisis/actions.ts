@@ -140,6 +140,7 @@ export async function confirmAnalysis(id: string, _: FormState, form: FormData):
     propertyLabel: confirmedFields.property || null,
     preview: samplePreview(await db.analyses.clauses(id)),
   });
+  console.log("[debug confirmAnalysis]", { id, rowStatus: row?.status });
   if (!row) return { error: "Este análisis ya no se puede editar." };
   redirect(`/analisis/${id}/estado`);
 }
