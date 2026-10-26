@@ -26,9 +26,9 @@ describe("Mercado Pago (API mockeada)", () => {
     expect(mapStatus("rejected")).toBe("rejected");
   });
 
-  it("crea la preferencia con external_reference y el webhook si la URL es pública", async () => {
+  it("crea la preferencia con external_reference, sin notification_url propia", async () => {
     const fetch = vi.fn(async () => Response.json({ id: "pref-1", init_point: "https://mp/checkout" }));
-    const mp = mercadoPagoProvider({ accessToken: "TEST-1", appUrl: "https://app.test", fetch });
+    const mp = mercadoPagoProvider({ accessToken: "TEST-1", fetch });
     const c = await mp.createCheckout({ paymentId: id, title: "Análisis", amountCents: 1_500_000, payerEmail: "a@b.c", returnUrl: "https://app.test/pago/retorno" });
     expect(c).toEqual({ redirectUrl: "https://mp/checkout", preferenceId: "pref-1" });
     const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
@@ -36,17 +36,19 @@ describe("Mercado Pago (API mockeada)", () => {
     const body = JSON.parse(String(init.body));
     expect(body.external_reference).toBe(id);
     expect(body.items[0].unit_price).toBe(15000);
-    expect(body.notification_url).toBe("https://app.test/api/webhooks/mercadopago");
+    // Sin notification_url: así siempre usa el webhook del panel (Tus
+    // integraciones), que firma de forma consistente.
+    expect(body.notification_url).toBeUndefined();
   });
 
   it("no crea preferencias sin precio", async () => {
-    const mp = mercadoPagoProvider({ accessToken: "TEST-1", appUrl: "https://app.test", fetch: vi.fn() });
+    const mp = mercadoPagoProvider({ accessToken: "TEST-1", fetch: vi.fn() });
     await expect(mp.createCheckout({ paymentId: id, title: "x", amountCents: 0, payerEmail: "a@b.c", returnUrl: "/" })).rejects.toThrow("precio");
   });
 
   it("lee el pago real", async () => {
     const fetch = vi.fn(async () => Response.json({ id: 123, status: "approved", external_reference: id, transaction_amount: 15000 }));
-    const p = await mercadoPagoProvider({ accessToken: "TEST-1", appUrl: "https://app.test", fetch }).getPayment("123");
+    const p = await mercadoPagoProvider({ accessToken: "TEST-1", fetch }).getPayment("123");
     expect(p).toEqual({ id: "123", status: "approved", externalReference: id, amountCents: 1_500_000 });
   });
 });

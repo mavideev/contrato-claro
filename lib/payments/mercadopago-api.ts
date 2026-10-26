@@ -24,7 +24,7 @@ export function mapStatus(mp: string): PaymentStatus {
   }
 }
 
-export function mercadoPagoProvider(opts: { accessToken: string; appUrl: string; fetch?: typeof fetch }): PaymentProvider {
+export function mercadoPagoProvider(opts: { accessToken: string; fetch?: typeof fetch }): PaymentProvider {
   const f = opts.fetch ?? fetch;
   const call = async (path: string, init?: RequestInit) => {
     const res = await f(`${API}${path}`, {
@@ -39,9 +39,6 @@ export function mercadoPagoProvider(opts: { accessToken: string; appUrl: string;
     name: "mercadopago",
     async createCheckout({ paymentId, title, amountCents, payerEmail, returnUrl }) {
       if (amountCents <= 0) throw new Error("Falta el precio (PRICE_ANALYSIS_ARS / PRICE_RECHECK_ARS)");
-      // Mercado Pago solo acepta notification_url públicas (https). En local, el
-      // webhook se configura en el panel de la aplicación con la URL del túnel.
-      const publicUrl = opts.appUrl.startsWith("https://");
       const pref = await call("/checkout/preferences", {
         method: "POST",
         headers: { "X-Idempotency-Key": paymentId },
@@ -52,7 +49,10 @@ export function mercadoPagoProvider(opts: { accessToken: string; appUrl: string;
           back_urls: { success: returnUrl, pending: returnUrl, failure: returnUrl },
           // auto_return exige back_urls https: en local se vuelve con «Volver al sitio».
           ...(returnUrl.startsWith("https://") ? { auto_return: "approved" } : {}),
-          ...(publicUrl ? { notification_url: `${opts.appUrl}/api/webhooks/mercadopago` } : {}),
+          // Sin notification_url: así siempre usa el webhook configurado en el
+          // panel de la aplicación (Tus integraciones), que firma distinto y
+          // de forma consistente. Poner notification_url acá tiene prioridad
+          // sobre esa configuración y firma distinto, más difícil de validar.
         }),
       });
       return { redirectUrl: pref.init_point, preferenceId: pref.id };
