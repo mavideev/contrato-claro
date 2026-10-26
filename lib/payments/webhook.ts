@@ -10,7 +10,6 @@ import { processPaymentNotification } from "./process";
 // /api/webhooks/mercadopago y el simulador local, con el mismo aviso firmado.
 export async function handleWebhook(request: Request): Promise<Response> {
   const secret = env().MP_WEBHOOK_SECRET;
-  console.log("imprimiendo secret ", secret);
   const url = new URL(request.url);
   const valid =
     !!secret &&
@@ -22,7 +21,8 @@ export async function handleWebhook(request: Request): Promise<Response> {
     });
   if (!valid) {
     console.error("[webhook mercadopago] firma inválida", {
-      hasSecret: !!secret,
+      secretLength: secret?.length ?? 0,
+      secretPrefix: secret?.slice(0, 4),
       dataId: url.searchParams.get("data.id"),
       signature: request.headers.get("x-signature"),
       requestId: request.headers.get("x-request-id"),
