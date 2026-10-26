@@ -34,6 +34,12 @@ function createAuth() {
     secret: e.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db(), { provider: "pg", schema }),
 
+    user: {
+      additionalFields: {
+        role: { type: "string", required: false, defaultValue: "user", input: false },
+      },
+    },
+
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,

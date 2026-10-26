@@ -6,10 +6,13 @@ import type { Clause } from "@/lib/extraction/clauses";
 
 export type PageImage = { bytes: Uint8Array; mime: string };
 
+/** Para registrar el costo de la llamada en `ai_usage` (panel /admin). */
+export type AiCallContext = { analysisId: string };
+
 export interface AiProvider {
   readonly name: "mock" | "anthropic";
   /** Lee el texto de las fotos de cada página (o de un PDF escaneado, como una sola entrada). Devuelve una entrada por página. */
-  readPages(pages: PageImage[]): Promise<string[]>;
+  readPages(pages: PageImage[], context?: AiCallContext): Promise<string[]>;
   /** Los campos críticos (documento base §3) leídos de las cláusulas. Vacío si el contrato no lo dice. */
-  extractFields(clauses: Clause[]): Promise<ConfirmedFields>;
+  extractFields(clauses: Clause[], context?: AiCallContext): Promise<ConfirmedFields>;
 }

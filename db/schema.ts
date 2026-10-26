@@ -36,6 +36,8 @@ export const user = pgTable("user", {
   email: text().notNull().unique(),
   emailVerified: boolean().notNull().default(false),
   image: text(),
+  // "user" o "admin" (panel de costo de IA, /admin). Se activa a mano por SQL.
+  role: text().notNull().default("user"),
   ...timestamps,
 });
 
@@ -217,6 +219,27 @@ export const clauses = pgTable(
     ...timestamps,
   },
   (t) => [unique().on(t.analysisId, t.number)],
+);
+
+export const aiCallKind = pgEnum("ai_call_kind", ["read_pages", "extract_fields"]);
+
+// Tokens de cada llamada a Claude, para el panel de costo (/admin). El costo
+// se calcula al mostrarlo (lib/ai/pricing.ts), no se guarda: así no queda
+// desactualizado si cambian los precios del modelo.
+export const aiUsage = pgTable(
+  "ai_usage",
+  {
+    id: id(),
+    analysisId: uuid()
+      .notNull()
+      .references(() => analyses.id, { onDelete: "cascade" }),
+    kind: aiCallKind().notNull(),
+    model: text().notNull(),
+    inputTokens: integer().notNull(),
+    outputTokens: integer().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index().on(t.analysisId)],
 );
 
 // ───────────────────────────── Normativa (RAG, etapa 5) ─────────────────────────────

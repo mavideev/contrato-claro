@@ -2,10 +2,11 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
-import type { ConfirmedFields } from "@/db/schema";
+import { aiUsage, type ConfirmedFields } from "@/db/schema";
+import { db } from "@/lib/db";
 import { ExtractionError } from "@/lib/extraction/read";
 import type { Clause } from "@/lib/extraction/clauses";
-import type { AiProvider, PageImage } from "./types";
+import type { AiCallContext, AiProvider, PageImage } from "./types";
 
 const MODEL = "claude-haiku-5-5";
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
@@ -34,6 +35,17 @@ export async function pingAnthropic(): Promise<void> {
   await client.models.retrieve(MODEL);
 }
 
+async function recordUsage(context: AiCallContext | undefined, kind: "read_pages" | "extract_fields", usage: { input_tokens: number; output_tokens: number }) {
+  if (!context) return;
+  try {
+    await db()
+      .insert(aiUsage)
+      .values({ analysisId: context.analysisId, kind, model: MODEL, inputTokens: usage.input_tokens, outputTokens: usage.output_tokens });
+  } catch (err) {
+    console.error("[ai usage]", err);
+  }
+}
+
 function pageBlock(page: PageImage): Anthropic.ContentBlockParam {
   const data = Buffer.from(page.bytes).toString("base64");
   if (page.mime === "application/pdf") {
@@ -48,7 +60,7 @@ function pageBlock(page: PageImage): Anthropic.ContentBlockParam {
 export const anthropicAi: AiProvider = {
   name: "anthropic",
 
-  async readPages(pages: PageImage[]) {
+  async readPages(pages: PageImage[], context?: AiCallContext) {
     if (pages.length === 0) return [];
     const singlePdf = pages.length === 1 && pages[0].mime === "application/pdf";
     const instructions = singlePdf
@@ -61,10 +73,11 @@ export const anthropicAi: AiProvider = {
       output_config: { format: zodOutputFormat(PagesSchema) },
       messages: [{ role: "user", content: [...pages.map(pageBlock), { type: "text", text: instructions }] }],
     });
+    await recordUsage(context, "read_pages", response.usage);
     return response.parsed_output?.pages ?? [];
   },
 
-  async extractFields(clauses: Clause[]) {
+  async extractFields(clauses: Clause[], context?: AiCallContext) {
     const contract = clauses.map((c) => `${c.title}\n${c.text}`).join("\n\n");
     const response = await client.messages.parse({
       model: MODEL,
@@ -77,6 +90,7 @@ export const anthropicAi: AiProvider = {
         },
       ],
     });
+    await recordUsage(context, "extract_fields", response.usage);
     return (response.parsed_output ?? {}) satisfies ConfirmedFields;
   },
 };
