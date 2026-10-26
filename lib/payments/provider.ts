@@ -14,7 +14,7 @@ export function paymentProvider(): PaymentProvider {
     return mockProvider(e.APP_URL);
   }
   if (!e.MP_ACCESS_TOKEN) throw new Error("Falta MP_ACCESS_TOKEN");
-  return mercadoPagoProvider({ accessToken: e.MP_ACCESS_TOKEN });
+  return mercadoPagoProvider({ accessToken: e.MP_ACCESS_TOKEN, appUrl: e.APP_URL });
 }
 
 /** Precio en centavos según el tipo de pago (0 = sin definir). */
