@@ -65,7 +65,10 @@ jobs:
       - name: Imagen de producción
         run: docker build --target runner -t contrato-claro:prod .
 
-      - name: Logs del entorno si algo falló
+      - name: Logs de la app si algo falló
+        if: failure()
+        run: docker compose logs app --tail 2000
+      - name: Logs del resto del entorno si algo falló
         if: failure()
         run: docker compose logs --tail 200
       - uses: actions/upload-artifact@v4
