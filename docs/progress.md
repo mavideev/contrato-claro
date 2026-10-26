@@ -6,14 +6,15 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 
 **Para probar a mano:** [guia-de-prueba.md](guia-de-prueba.md), paso a paso.
 
-## Cómo retomar (última actualización: 25/10/2026)
+## Cómo retomar (última actualización: 26/10/2026)
 
 ### Dónde quedamos
 
-- **Etapa 2** (captura y extracción) terminada y probada a mano por la usuaria: texto pegado, informe y PDF. Falta probar las fotos ([guía](guia-de-prueba.md), parte F).
-- **Mercado Pago:** la usuaria ya tiene la aplicación (Checkout Pro, API de Preferences) y su Access Token de prueba. Se decidió **no** usar túnel en local: el webhook se prueba directo en el primer despliegue.
-- **Claude conectado:** `lib/ai/anthropic.ts` implementa `AiProvider` (fotos y PDF escaneado con bloques de imagen/documento, datos clave con salida estructurada validada con Zod). Modelo: `claude-haiku-4-5` (elegido por la usuaria, por costo). Sin probar todavía con contratos ni fotos reales — se prueba directo en el despliegue, no en local.
-- **Primer despliegue en Render: en curso**, probado por la usuaria directamente ahí (no en local). Hasta ahora: Web Service con su URL, Postgres y storage (S3-compatible, con `S3_FORCE_PATH_STYLE=true`) respondiendo ok en `/api/health`, Inngest Cloud sincronizado, webhook de Mercado Pago configurado. Checklist de variables en [render-env.md](render-env.md). Falta probar el flujo completo (subir contrato → pagar → informe) ahora que Claude está conectado.
+- **Primer despliegue en Render: hecho y probado de punta a punta.** Subir contrato (PDF real, con Claude) → confirmar datos clave → pagar con Mercado Pago (de prueba y real) → webhook → informe (de ejemplo, etapa 3 todavía no está) desbloqueado. Todo probado directo en `https://contrato-claro-rolt.onrender.com`, no en local.
+- **Claude conectado:** `lib/ai/anthropic.ts` implementa `AiProvider` (fotos y PDF escaneado con bloques de imagen/documento, datos clave con salida estructurada validada con Zod). Modelo: `claude-haiku-5-5` (el más nuevo y barato al momento de conectar). Probado con un PDF real: leyó bien los datos clave, incluida una inconsistencia en el depósito que el contrato no aclaraba. Fotos todavía no probadas.
+- **Mercado Pago, lo importante para no repetir la vuelta:** con credenciales de **prueba**, la clave secreta del webhook de tu cuenta developer **no sirve** para validar la firma de pagos reales de sandbox — hay que sacarla de la cuenta **vendedor de prueba** (detalle en [deploy.md](deploy.md), sección 8). Con credenciales de **producción** anda directo, sin este problema. Ya se probó un pago real (tarjeta real, monto bajo) y cerró el circuito completo.
+- **Migraciones:** ya no dependen del Pre-Deploy Command de Render (es una feature paga). El contenedor las corre solo al arrancar (`Dockerfile`).
+- Falta: probar fotos con Claude, etapa 3 (informe real con IA), y los pendientes sueltos de siempre (ver abajo).
 
 ### Ramas
 
@@ -39,11 +40,10 @@ Todo está en `main` (etapas 0, 1 y 2) y se trabaja directo ahí, sin ramas apar
 
 ### Próximos pasos, en orden
 
-1. Que la usuaria elija A o B (arriba).
-2. Si es A: conectar Claude en `lib/ai/` (un `anthropic.ts` que implemente `AiProvider`: leer fotos y PDF escaneados, y sacar los datos clave con salida validada con Zod), probarlo con el set de `evals/` y con fotos reales.
-3. Primer despliegue siguiendo [deploy.md](deploy.md), en este orden: Render Postgres → Cloudflare R2 (con CORS) → Resend (dominio verificado) → Inngest Cloud → Web Service de Render con las variables → Webhook de Mercado Pago apuntando a `https://TU-DOMINIO/api/webhooks/mercadopago` (su clave secreta va en `MP_WEBHOOK_SECRET`) → verificación (paso 9).
-4. Etapa 3: el informe con IA (checklist, semáforo, citas, PDF).
-5. Pendientes sueltos: borrar un análisis suelto, captcha, aviso de foto borrosa, regla de vencimiento para subidas abandonadas en S3 y la pregunta abierta 2.
+1. Probar fotos con Claude (`lib/ai/anthropic.ts`, `readPages`) — pendiente, solo se probó PDF con texto.
+2. Verificación completa de `deploy.md` (paso 9): mails de verificación/link mágico, `/analisis` sin sesión, IP detrás del proxy (punto 9.8, sigue pendiente).
+3. Etapa 3: el informe con IA (checklist, semáforo, citas, PDF) — hoy el informe es de ejemplo (`lib/analysis/sample-report.ts`).
+4. Pendientes sueltos: borrar un análisis suelto, captcha, aviso de foto borrosa, regla de vencimiento para subidas abandonadas en S3 y la pregunta abierta 2.
 
 ## Etapas del proyecto
 
@@ -51,9 +51,9 @@ El plan completo está en el [documento base, §9](../documento-base-mvp-v0.2.md
 
 | Etapa | Qué incluye | Estado |
 |---|---|---|
-| 0. Base | repositorio, Docker, base de datos, cuentas, pantallas, webhook, subida a S3, CI | ✅ (falta el primer despliegue en Render, ver [deploy.md](deploy.md)) |
-| 1. Cuentas y pago | Mercado Pago real con webhook | 🟡 todo funciona con el simulador; falta probar con la cuenta de Mercado Pago |
-| 2. Captura y extracción | foto, PDF, Word y texto → cláusulas | 🟡 todo funciona con el simulador de IA; falta conectar Claude para fotos y datos clave |
+| 0. Base | repositorio, Docker, base de datos, cuentas, pantallas, webhook, subida a S3, CI | ✅ desplegado en Render |
+| 1. Cuentas y pago | Mercado Pago real con webhook | ✅ probado con pago real y de prueba |
+| 2. Captura y extracción | foto, PDF, Word y texto → cláusulas | 🟡 Claude conectado y probado con PDF; falta probar fotos |
 | 3. Informe de alquileres | checklist, semáforo, citas, PDF | ⏳ |
 | 4. Re-chequeo | huellas, comparación, certificado | ⏳ |
 | 5. Normativa (RAG) | normas versionadas y búsqueda | ⏳ |

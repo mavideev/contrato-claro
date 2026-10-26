@@ -39,7 +39,6 @@ export function mercadoPagoProvider(opts: { accessToken: string; appUrl: string;
     name: "mercadopago",
     async createCheckout({ paymentId, title, amountCents, payerEmail, returnUrl }) {
       if (amountCents <= 0) throw new Error("Falta el precio (PRICE_ANALYSIS_ARS / PRICE_RECHECK_ARS)");
-      console.log("[mercadopago] creando preferencia con access token", opts.accessToken.slice(0, 15));
       const pref = await call("/checkout/preferences", {
         method: "POST",
         headers: { "X-Idempotency-Key": paymentId },

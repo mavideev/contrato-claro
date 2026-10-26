@@ -117,6 +117,7 @@ Una vez que la app tiene su URL:
 
 - **Google OAuth** (opcional): en Google Cloud Console → Credenciales → «URI de redireccionamiento autorizados»: `https://TU-DOMINIO/api/auth/callback/google`. ⚠️ El login con Google todavía no se probó con credenciales reales.
 - **Mercado Pago:** en Mercado Pago Developers → tu app → Webhooks: URL `https://TU-DOMINIO/api/webhooks/mercadopago`, evento «Pagos». Copiar la clave secreta a `MP_WEBHOOK_SECRET`. El webhook verifica la firma, guarda el evento, consulta el pago a Mercado Pago y, si está aprobado, desbloquea el análisis. Si algo falla responde 500 y Mercado Pago reintenta.
+  - ⚠️ **Con credenciales de prueba, esa clave secreta NO es la que firma los avisos.** Los pagos hechos con usuario comprador de prueba los recibe (como vendedor) una cuenta de prueba aparte, con su propia integración y su propia clave secreta — no la que ves en tu cuenta developer. Para conseguirla: iniciá sesión en developers.mercadopago.com con el usuario/contraseña del **vendedor de prueba** (no el comprador — se crean juntos en «Cuentas de prueba»), entrá a «Tus integraciones» de esa cuenta (Mercado Pago ya crea ahí una app `TestApp-...` sola, apenas llega el primer pago) y configurá el webhook ahí para sacar la clave correcta. Confirmado con la comunidad de developers de Mercado Pago (no es un caso aislado) y con horas de prueba y error acá. Con credenciales de **producción** no pasa esto: la clave de tu cuenta developer es la correcta.
 - **Inngest:** Sync app (paso 5).
 
 ## 9. Verificación después del primer deploy
