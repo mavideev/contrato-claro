@@ -20,7 +20,13 @@ export async function handleWebhook(request: Request): Promise<Response> {
       dataId: url.searchParams.get("data.id"),
     });
   if (!valid) {
-    console.error("[webhook mercadopago] firma inválida", { hasSecret: !!secret, dataId: url.searchParams.get("data.id") });
+    console.error("[webhook mercadopago] firma inválida", {
+      hasSecret: !!secret,
+      dataId: url.searchParams.get("data.id"),
+      signature: request.headers.get("x-signature"),
+      requestId: request.headers.get("x-request-id"),
+      body: await request.text().catch(() => "<no se pudo leer>"),
+    });
     return Response.json({ error: "firma inválida" }, { status: 401 });
   }
 
