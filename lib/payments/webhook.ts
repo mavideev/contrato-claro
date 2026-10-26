@@ -19,15 +19,23 @@ export async function handleWebhook(request: Request): Promise<Response> {
       requestId: request.headers.get("x-request-id"),
       dataId: url.searchParams.get("data.id"),
     });
-  if (!valid) return Response.json({ error: "firma inválida" }, { status: 401 });
+  if (!valid) {
+    console.error("[webhook mercadopago] firma inválida", { hasSecret: !!secret, dataId: url.searchParams.get("data.id") });
+    return Response.json({ error: "firma inválida" }, { status: 401 });
+  }
 
   let body: { id?: string | number; type?: string; action?: string; data?: { id?: string | number } };
   try {
     body = await request.json();
   } catch {
+    console.error("[webhook mercadopago] cuerpo inválido");
     return Response.json({ error: "cuerpo inválido" }, { status: 400 });
   }
-  if (body.id === undefined) return Response.json({ error: "falta id" }, { status: 400 });
+  if (body.id === undefined) {
+    console.error("[webhook mercadopago] falta id", body);
+    return Response.json({ error: "falta id" }, { status: 400 });
+  }
+  console.log("[webhook mercadopago] recibido", { id: body.id, type: body.type ?? body.action });
 
   // Idempotencia: provider_event_id es único. Un evento ya procesado se ignora;
   // uno que falló antes (processed_at vacío) se vuelve a procesar.
