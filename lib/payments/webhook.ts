@@ -10,6 +10,7 @@ import { processPaymentNotification } from "./process";
 // /api/webhooks/mercadopago y el simulador local, con el mismo aviso firmado.
 export async function handleWebhook(request: Request): Promise<Response> {
   const secret = env().MP_WEBHOOK_SECRET;
+  console.log("imprimiendo secret ", secret);
   const url = new URL(request.url);
   const valid =
     !!secret &&
