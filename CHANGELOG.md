@@ -2,6 +2,22 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.3.0] - 2026-10-27
+
+### Added
+
+- Análisis real de riesgos con IA (etapa 3): checklist propio (`lib/analysis/checklists/rental-v1.ts`) basado en la ley vigente (post DNU 70/2023, que derogó la Ley de Alquileres), sin RAG todavía. Reemplaza el informe de ejemplo del flujo pagado por hallazgos reales por cláusula, siempre citando la cláusula, más una revisión del documento completo (anexos no adjuntos, domicilios inconsistentes, firmantes vs. ejemplares, cláusula de jurisdicción faltante).
+- Descarga del informe en PDF (con `pdf-lib`), con marca de agua de Contrato Claro.
+- Aviso legal visible (no letra chica) en vista previa, informe y re-chequeo: esto no es un consejo legal, consultar a un abogado antes de decidir algo.
+- `docs/normativa-alquileres.md`: referencia de la ley vigente usada para el checklist, con fuentes y fecha, para actualizar a mano cuando cambie.
+- Animación en la pantalla de "Leyendo tu contrato" / "Preparando tu informe": paso activo con anillo pulsante e ícono animado, para que se note que la IA está trabajando.
+
+### Fixed
+
+- "Mis análisis" escondía el link a "Ver informe" cuando la fecha de firma es hoy (dejaba solo "Re-chequear hoy"), sin forma de volver a ver un informe ya pagado.
+- El checklist citaba el régimen de rescisión anticipada derogado (preaviso de 10 días + multa). El vigente (art. 1221 CCyC, reescrito por el DNU 70/2023) es 10% del saldo de alquileres futuros, sin plazo mínimo de permanencia.
+- Agrega la Ley 5859 (CABA): prohibido cobrarle la comisión inmobiliaria a la inquilina en alquileres de vivienda.
+
 ## [0.2.0] - 2026-10-26
 
 ### Added
