@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BottomBar, FlowPage, SkeletonBlock } from "@/components/app/flow";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { LegalDisclaimer } from "@/components/ui/disclaimer";
 import { RiskCounts } from "@/components/ui/pill";
 import { Title } from "@/components/ui/typography";
@@ -132,10 +132,7 @@ async function Report({ params }: Pick<PageProps<"/analisis/[id]/informe">, "par
           <ButtonLink href={`/analisis/${id}/rechequeo`} variant="outline">
             Re-chequear el día de la firma
           </ButtonLink>
-          {/* El PDF llega en la etapa 3. */}
-          <Button type="button" disabled title="Disponible próximamente">
-            Descargar informe PDF
-          </Button>
+          <ButtonLink href={`/analisis/${id}/informe/pdf`}>Descargar informe PDF</ButtonLink>
         </div>
       </BottomBar>
     </>
