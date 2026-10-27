@@ -107,10 +107,11 @@ export async function startAnalysis(_: FormState, form: FormData): Promise<FormS
   try {
     await inngest.send({ name: "analysis/uploaded", data: { analysisId: analysis.id, userId: user.id } });
   } catch (err) {
-    console.error("[análisis] no se pudo encolar la extracción", err);
+    console.error("[análisis] no se pudo encolar la extracción", { analysisId: analysis.id, err });
     await db.analyses.markFailed(analysis.id, "queue");
     return { error: "No pudimos empezar a leer tu contrato. Probá de nuevo en un rato." };
   }
+  console.log("[análisis] contrato subido, extracción encolada", { analysisId: analysis.id, method: input.method });
   redirect(`/analisis/${analysis.id}/estado`);
 }
 
@@ -140,7 +141,11 @@ export async function confirmAnalysis(id: string, _: FormState, form: FormData):
     propertyLabel: confirmedFields.property || null,
     preview: samplePreview(await db.analyses.clauses(id)),
   });
-  if (!row) return { error: "Este análisis ya no se puede editar." };
+  if (!row) {
+    console.error("[análisis] no se pudo confirmar (estado inválido)", { analysisId: id });
+    return { error: "Este análisis ya no se puede editar." };
+  }
+  console.log("[análisis] datos clave confirmados", { analysisId: id });
   redirect(`/analisis/${id}/estado`);
 }
 

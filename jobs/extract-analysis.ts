@@ -21,12 +21,13 @@ export const extractAnalysis = inngest.createFunction(
     retries: 3,
     onFailure: async ({ event, error }) => {
       const { analysisId } = event.data.event.data as { analysisId: string };
-      console.error("[extracción] falló después de los reintentos", analysisId, error);
+      console.error("[análisis] falló después de los reintentos", { analysisId, error });
       await fail(analysisId, error instanceof ExtractionError ? error.code : "unreadable");
     },
   },
   async ({ event, step }) => {
     const { analysisId } = event.data as { analysisId: string };
+    console.log("[análisis] extracción iniciada", { analysisId });
 
     const read = await step.run("leer el texto", async () => {
       const doc = await originalDocument(analysisId);
@@ -35,14 +36,19 @@ export const extractAnalysis = inngest.createFunction(
         return await readText(doc, analysisId);
       } catch (err) {
         if (!(err instanceof ExtractionError)) throw err;
+        console.error("[análisis] no se pudo leer el texto", { analysisId, code: err.code });
         await fail(analysisId, err.code);
         return null;
       }
     });
     if (!read) return { analysisId, status: "failed" };
+    console.log("[análisis] texto leído", { analysisId, pages: read.pages.length });
 
     const clauses = splitClauses(read.pages);
+    console.log("[análisis] cláusulas detectadas", { analysisId, clauses: clauses.length });
+
     const fields = await step.run("datos clave", () => aiProvider().extractFields(clauses, { analysisId }));
+    console.log("[análisis] datos clave extraídos", { analysisId, ai: aiProvider().name, camposLeidos: Object.values(fields).filter(Boolean).length });
 
     await step.run("guardar", async () => {
       await db().transaction(async (tx) => {
@@ -58,6 +64,7 @@ export const extractAnalysis = inngest.createFunction(
         await tx.insert(clausesTable).values(clauses.map((c) => ({ ...c, analysisId, sha256: sha256(c.text) })));
       });
     });
+    console.log("[análisis] extracción completa", { analysisId, clauses: clauses.length, ai: aiProvider().name });
     return { analysisId, clauses: clauses.length, ai: aiProvider().name };
   },
 );
@@ -82,6 +89,7 @@ async function readText(doc: typeof documents.$inferSelect, analysisId: string):
     // La huella de un escaneo es la de todas sus páginas en orden.
     const hash = createHash("sha256");
     images.forEach((i) => hash.update(i.bytes));
+    console.log("[análisis] leyendo fotos con IA", { analysisId, fotos: images.length, ai: aiProvider().name });
     const text = await aiProvider().readPages(images, { analysisId });
     if (!hasText(text)) throw new ExtractionError("photos_without_text", "No se pudo leer texto en las fotos");
     return { documentId: doc.id, pages: text, sha256: hash.digest("hex") };
@@ -92,6 +100,7 @@ async function readText(doc: typeof documents.$inferSelect, analysisId: string):
     return { documentId: doc.id, pages: await readDocument(doc.kind, bytes), sha256: sha256(bytes) };
   } catch (err) {
     if (!(err instanceof ExtractionError) || err.code !== "pdf_without_text") throw err;
+    console.log("[análisis] PDF escaneado, leyendo con IA", { analysisId, ai: aiProvider().name });
     const pages = await aiProvider().readPages([{ bytes, mime: doc.mime }], { analysisId });
     if (!hasText(pages)) throw new ExtractionError("photos_without_text", "No se pudo leer texto en el PDF escaneado");
     return { documentId: doc.id, pages, sha256: sha256(bytes) };
