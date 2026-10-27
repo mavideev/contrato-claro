@@ -8,18 +8,21 @@ export function ProgressSteps({ steps, active }: { steps: string[]; active: numb
         const current = i === active;
         return (
           <li key={label} className={`flex items-center gap-3.5 text-base md:gap-4 md:text-lg ${done || current ? "text-ink" : "text-[#7B8794]"}`}>
-            <span
-              className={`flex size-6 shrink-0 items-center justify-center rounded-full ${
-                done ? "bg-ok" : current ? "bg-primary shadow-[0_0_0_6px_#CDE8E6]" : "border-2 border-line bg-surface"
-              }`}
-            >
-              {done && (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M5 12l5 5L20 7" />
-                </svg>
-              )}
+            <span className="relative flex size-6 shrink-0 items-center justify-center">
+              {current && <span aria-hidden className="absolute size-full animate-ping rounded-full bg-primary opacity-60" />}
+              <span
+                className={`relative flex size-6 items-center justify-center rounded-full ${
+                  done ? "bg-ok" : current ? "bg-primary" : "border-2 border-line bg-surface"
+                }`}
+              >
+                {done && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M5 12l5 5L20 7" />
+                  </svg>
+                )}
+              </span>
             </span>
-            {label}
+            <span className={current ? "animate-pulse" : ""}>{label}</span>
             <span className="sr-only">{done ? "(hecho)" : current ? "(en curso)" : "(pendiente)"}</span>
           </li>
         );

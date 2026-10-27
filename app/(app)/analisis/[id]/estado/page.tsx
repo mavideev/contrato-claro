@@ -59,7 +59,22 @@ async function Status({ params }: Pick<PageProps<"/analisis/[id]/estado">, "para
     <>
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:gap-12">
         <div className="flex flex-col gap-5 md:flex-[1_1_360px] md:gap-[22px]">
-          <Title>{heading}</Title>
+          <div className="flex items-center gap-2.5">
+            <Title>{heading}</Title>
+            {active < steps.length && status !== "failed" && (
+              <svg
+                aria-hidden="true"
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="shrink-0 animate-pulse text-primary"
+              >
+                <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
+                <path d="M19 15l.9 2.6L22.5 18.5l-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9L19 15z" opacity="0.7" />
+              </svg>
+            )}
+          </div>
           {status === "failed" ? (
             <>
               <p className="text-ink-2">{FAILED[analysis.errorCode ?? ""] ?? FAILED.unreadable}</p>
