@@ -38,7 +38,10 @@ export function analysisCard(a: Analysis, today: string): AnalysisCard {
       subtitle: `Analizado el ${created}${signing}`,
       pill: signsToday ? { tone: "attention", label: "Firma hoy" } : { tone: "ok", label: "Informe listo" },
       actions: signsToday
-        ? [{ label: "Re-chequear hoy", href: `${base}/rechequeo`, variant: "primary" }]
+        ? [
+            { label: "Re-chequear hoy", href: `${base}/rechequeo`, variant: "primary" },
+            { label: "Ver informe", href: `${base}/informe`, variant: "ghost" },
+          ]
         : [
             { label: "Ver informe", href: `${base}/informe`, variant: "ghost" },
             { label: "Re-chequear", href: `${base}/rechequeo`, variant: "ghost" },

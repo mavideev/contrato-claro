@@ -24,7 +24,10 @@ describe("analysisCard()", () => {
     const card = analysisCard({ ...base, status: "ready", signingDate: today }, today);
     expect(card.subtitle).toBe("Analizado el 14 oct · firma hoy, 16 oct");
     expect(card.pill.label).toBe("Firma hoy");
-    expect(card.actions).toEqual([{ label: "Re-chequear hoy", href: "/analisis/a1/rechequeo", variant: "primary" }]);
+    expect(card.actions).toEqual([
+      { label: "Re-chequear hoy", href: "/analisis/a1/rechequeo", variant: "primary" },
+      { label: "Ver informe", href: "/analisis/a1/informe", variant: "ghost" },
+    ]);
     expect(card.highlight).toBe(true);
   });
 
