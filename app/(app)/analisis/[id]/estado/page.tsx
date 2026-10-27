@@ -41,7 +41,6 @@ export default function Page({ params }: PageProps<"/analisis/[id]/estado">) {
 async function Status({ params }: Pick<PageProps<"/analisis/[id]/estado">, "params">) {
   const { analysis, db } = await loadAnalysis(params, "estado");
   const { id, status, preview } = analysis;
-  console.log("[debug estado]", { id, status });
   if (status === "awaiting_confirmation" || status === "draft") redirect(`/analisis/${id}/confirmar`);
   if (status === "ready") redirect(`/analisis/${id}/informe`);
 
