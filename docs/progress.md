@@ -44,6 +44,7 @@ Todo está en `main` (etapas 0, 1 y 2) y se trabaja directo ahí, sin ramas apar
 2. Verificación completa de `deploy.md` (paso 9): mails de verificación/link mágico, `/analisis` sin sesión, IP detrás del proxy (punto 9.8, sigue pendiente).
 3. Etapa 3: el informe con IA (checklist, semáforo, citas, PDF) — hoy el informe es de ejemplo (`lib/analysis/sample-report.ts`).
 4. Pendientes sueltos: borrar un análisis suelto, captcha, aviso de foto borrosa, regla de vencimiento para subidas abandonadas en S3 y la pregunta abierta 2.
+5. CI: un test de Playwright (`e2e/flow.spec.ts`, "subir → confirmar → vista previa...") falla intermitente — el servidor hace todo bien, pero el navegador a veces no refleja la navegación a `/estado`. No pasa en producción (probado a mano). Detalle en el comentario arriba del test.
 
 ## Etapas del proyecto
 

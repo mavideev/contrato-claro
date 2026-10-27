@@ -32,6 +32,11 @@ test.describe("con un usuario nuevo", () => {
     await deleteAccount(page);
   });
 
+  // ⚠️ Falla intermitente en CI (no en producción, probado a mano en Render):
+  // el servidor deja el análisis en `preview_ready` bien (confirmado por log),
+  // pero el navegador a veces se queda en /confirmar y nunca refleja la
+  // navegación a /estado. Parece un tema puntual de Next.js en modo desarrollo
+  // con este redirect-después-de-Server-Action. Pendiente de investigar a fondo.
   test("subir → confirmar → vista previa → pagar → pago pendiente", async ({
     page,
     request,
