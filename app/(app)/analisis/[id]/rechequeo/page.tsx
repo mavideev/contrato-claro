@@ -5,6 +5,7 @@ import { createRecheck, startRecheckPayment } from "@/app/(app)/analisis/actions
 import { BottomBar, FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { RecheckUpload } from "@/components/app/recheck-upload";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { LegalDisclaimer } from "@/components/ui/disclaimer";
 import { Kicker, Title } from "@/components/ui/typography";
 import { clauseLabel } from "@/lib/analysis/presentation";
 import { requireUser } from "@/lib/auth/session";
@@ -167,6 +168,7 @@ async function Recheck({ params }: Pick<PageProps<"/analisis/[id]/rechequeo">, "
     <>
       {header(comparedText)}
       {body}
+      {latest.result !== "pending" && latest.result !== "failed" && <LegalDisclaimer />}
       {latest.result !== "pending" && latest.result !== "failed" && (
         <BottomBar>
           <div className="order-2 md:order-1">{upload}</div>

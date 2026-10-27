@@ -1,7 +1,7 @@
 import type { ConfirmedFields } from "@/db/schema";
 import { SAMPLE_CLAUSES } from "@/lib/analysis/sample-report";
 import type { Clause } from "@/lib/extraction/clauses";
-import type { AiProvider } from "./types";
+import type { AiProvider, RiskFinding } from "./types";
 
 // Simulador de IA, para trabajar sin ANTHROPIC_API_KEY (como el simulador de pagos).
 // - Fotos: no las mira. Devuelve el contrato de ejemplo repartido en tantas
@@ -25,7 +25,62 @@ export const mockAi: AiProvider = {
   async extractFields(clauses) {
     return guessFields(clauses);
   },
+  async analyzeRisks(clauses) {
+    return guessRisks(clauses);
+  },
 };
+
+/** Hallazgos con reglas simples: marca "attention" cuando falta una aclaración típica (checklist rental-v1). */
+export function guessRisks(clauses: Clause[]): RiskFinding[] {
+  const findings: RiskFinding[] = [];
+  const find = (re: RegExp) => clauses.find((c) => re.test(c.title));
+
+  const term = find(/plazo|duraci/i);
+  if (term && !/\(?\d{1,3}\)?\s*(mes|año)/i.test(term.text)) {
+    findings.push({
+      clauseNumber: term.number,
+      level: "attention",
+      title: "Plazo sin duración explícita",
+      explanation: "No encontramos una duración en meses o años. Sin esto, por ley rige un piso de 2 años (vivienda) o 3 (otros usos).",
+      whatToAsk: "Pedí que se aclare la duración exacta del contrato.",
+    });
+  }
+
+  const deposit = find(/dep[oó]sito/i);
+  if (deposit && !/devol|devuel|restituc|actualiza/i.test(deposit.text)) {
+    findings.push({
+      clauseNumber: deposit.number,
+      level: "attention",
+      title: "Depósito sin forma de devolución",
+      explanation: "No dice cómo se devuelve el depósito al final del contrato. Ya no hay tope legal, así que esto conviene que quede por escrito.",
+      whatToAsk: "Pedí que se aclare cómo y cuándo se devuelve el depósito.",
+    });
+  }
+
+  const adjustment = find(/ajuste|actualizaci/i);
+  if (adjustment && !/\b(IPC|ICL|CAC|CER|UVA|[ií]ndice)\b/i.test(adjustment.text)) {
+    findings.push({
+      clauseNumber: adjustment.number,
+      level: "attention",
+      title: "Ajuste sin índice claro",
+      explanation: "No se especifica qué índice se usa para actualizar el precio.",
+      whatToAsk: "Preguntá qué índice se usa y qué pasa si deja de publicarse.",
+    });
+  }
+
+  const termination = find(/rescisi/i);
+  if (termination && !/d[ií]as/i.test(termination.text)) {
+    findings.push({
+      clauseNumber: termination.number,
+      level: "attention",
+      title: "Rescisión sin preaviso claro",
+      explanation: "No se especifica con cuántos días de anticipación hay que avisar.",
+      whatToAsk: "Preguntá el plazo de preaviso y si hay multa por irte antes.",
+    });
+  }
+
+  return findings;
+}
 
 const MAX = 300;
 const clip = (s: string | undefined) => (s ? s.replace(/\s+/g, " ").trim().slice(0, MAX) : "");

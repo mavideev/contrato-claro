@@ -221,7 +221,7 @@ export const clauses = pgTable(
   (t) => [unique().on(t.analysisId, t.number)],
 );
 
-export const aiCallKind = pgEnum("ai_call_kind", ["read_pages", "extract_fields"]);
+export const aiCallKind = pgEnum("ai_call_kind", ["read_pages", "extract_fields", "analyze_risks"]);
 
 // Tokens de cada llamada a Claude, para el panel de costo (/admin). El costo
 // se calcula al mostrarlo (lib/ai/pricing.ts), no se guarda: así no queda

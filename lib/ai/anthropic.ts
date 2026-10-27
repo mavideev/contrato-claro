@@ -6,7 +6,7 @@ import { aiUsage, type ConfirmedFields } from "@/db/schema";
 import { db } from "@/lib/db";
 import { ExtractionError } from "@/lib/extraction/read";
 import type { Clause } from "@/lib/extraction/clauses";
-import type { AiCallContext, AiProvider, PageImage } from "./types";
+import type { AiCallContext, AiProvider, PageImage, RiskFinding } from "./types";
 
 const MODEL = "claude-haiku-5-5";
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
@@ -15,6 +15,18 @@ type SupportedImageType = (typeof SUPPORTED_IMAGE_TYPES)[number];
 const client = new Anthropic();
 
 const PagesSchema = z.object({ pages: z.array(z.string()) });
+
+const RisksSchema = z.object({
+  findings: z.array(
+    z.object({
+      clauseNumber: z.number().int(),
+      level: z.enum(["high", "attention"]),
+      title: z.string(),
+      explanation: z.string(),
+      whatToAsk: z.string().optional(),
+    }),
+  ),
+});
 
 const FieldsSchema = z.object({
   landlord: z.string().optional(),
@@ -35,7 +47,11 @@ export async function pingAnthropic(): Promise<void> {
   await client.models.retrieve(MODEL);
 }
 
-async function recordUsage(context: AiCallContext | undefined, kind: "read_pages" | "extract_fields", usage: { input_tokens: number; output_tokens: number }) {
+async function recordUsage(
+  context: AiCallContext | undefined,
+  kind: "read_pages" | "extract_fields" | "analyze_risks",
+  usage: { input_tokens: number; output_tokens: number },
+) {
   if (!context) return;
   try {
     await db()
@@ -92,5 +108,24 @@ export const anthropicAi: AiProvider = {
     });
     await recordUsage(context, "extract_fields", response.usage);
     return (response.parsed_output ?? {}) satisfies ConfirmedFields;
+  },
+
+  async analyzeRisks(clauses: Clause[], checklist: string, context?: AiCallContext) {
+    const contract = clauses.map((c) => `Cláusula ${c.number} — ${c.title}\n${c.text}`).join("\n\n");
+    const response = await client.messages.parse({
+      model: MODEL,
+      max_tokens: 8192,
+      output_config: { format: zodOutputFormat(RisksSchema) },
+      messages: [{ role: "user", content: `${checklist}\n\nContrato (cada cláusula con su número):\n\n${contract}` }],
+    });
+    await recordUsage(context, "analyze_risks", response.usage);
+
+    const findings = response.parsed_output?.findings ?? [];
+    const validNumbers = new Set(clauses.map((c) => c.number));
+    const valid: RiskFinding[] = findings.filter((f) => validNumbers.has(f.clauseNumber));
+    if (valid.length < findings.length) {
+      console.error("[análisis] hallazgos sin cláusula válida, descartados", { analysisId: context?.analysisId, descartados: findings.length - valid.length });
+    }
+    return valid;
   },
 };

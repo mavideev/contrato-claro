@@ -8,6 +8,7 @@ import { FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { ProgressSteps } from "@/components/app/progress-steps";
 import { WaitForReading } from "@/components/app/wait-for-reading";
 import { Button, buttonClass } from "@/components/ui/button";
+import { LegalDisclaimer } from "@/components/ui/disclaimer";
 import { RiskCounts } from "@/components/ui/pill";
 import { Kicker, Title } from "@/components/ui/typography";
 import { loadAnalysis } from "@/lib/analysis/load";
@@ -80,6 +81,7 @@ async function Status({ params }: Pick<PageProps<"/analisis/[id]/estado">, "para
           <section className="flex flex-col gap-3.5 rounded-2xl border border-line-soft bg-surface px-5 py-[22px] md:max-w-[560px] md:flex-[999_1_480px] md:gap-[18px] md:p-8">
             <Kicker>Vista previa gratuita</Kicker>
             <RiskCounts {...preview} />
+            <LegalDisclaimer />
             <div aria-hidden className="flex flex-col gap-2.5">
               {["bg-high w-[60%]", "bg-attention w-[45%]"].map((c) => (
                 <div key={c} className="flex h-[42px] items-center gap-2.5 rounded-[10px] bg-[#EFEAE2] px-4 blur-[1px] md:h-12">

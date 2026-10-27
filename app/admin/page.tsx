@@ -16,7 +16,7 @@ const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD",
 
 type UsageRow = {
   analysisId: string;
-  kind: "read_pages" | "extract_fields";
+  kind: (typeof aiUsage.$inferSelect)["kind"];
   model: string;
   status: string;
   createdAt: Date;
@@ -77,18 +77,19 @@ async function Report() {
     .sort((a, b) => b.cost - a.cost);
 
   const total = analysesCost.reduce((sum, a) => sum + a.cost, 0);
-  const byKind = { read_pages: 0, extract_fields: 0 };
+  const byKind = { read_pages: 0, extract_fields: 0, analyze_risks: 0 };
   for (const row of rows) byKind[row.kind] += costUsd(row.model, row.inputTokens, row.outputTokens) ?? 0;
 
   if (rows.length === 0) return <p className="text-ink-2">Todavía no hay llamadas a Claude registradas.</p>;
 
   return (
     <>
-      <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <Stat label="Gastado en total" value={usd.format(total)} />
         <Stat label="Análisis con IA" value={String(analysesCost.length)} />
         <Stat label="Leer fotos/PDF" value={usd.format(byKind.read_pages)} />
         <Stat label="Datos clave" value={usd.format(byKind.extract_fields)} />
+        <Stat label="Riesgos por cláusula" value={usd.format(byKind.analyze_risks)} />
       </section>
 
       <div className="overflow-x-auto rounded-[14px] border border-line-soft">

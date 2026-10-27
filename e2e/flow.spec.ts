@@ -104,11 +104,11 @@ test.describe("con un usuario nuevo", () => {
     await expect(page.getByRole("heading", { name: "Pago aprobado" })).toBeVisible();
     await page.getByRole("link", { name: "Ver mi informe" }).click();
 
-    // El job de Inngest escribe el informe de ejemplo; la pantalla se actualiza sola.
+    // El job de Inngest corre el análisis real (con el simulador, sin ANTHROPIC_API_KEY).
     await expect(page).toHaveURL(/\/informe$/, { timeout: 60_000 });
-    // Las 14 partes del contrato pegado (encabezado + 13 cláusulas); 3 con hallazgos de ejemplo.
-    await expect(page.getByText("11 cláusulas sin alertas")).toBeVisible();
-    await expect(page.getByText("Cláusula 5 · Depósito").first()).toBeVisible();
+    // Las 14 partes del contrato pegado (encabezado + 13 cláusulas); este contrato
+    // de muestra no tiene ambigüedades según el checklist, así que no da hallazgos.
+    await expect(page.getByText("14 cláusulas sin alertas")).toBeVisible();
 
     await page.getByRole("link", { name: "Re-chequear el día de la firma" }).click();
     await page.getByRole("button", { name: "Pagar con Mercado Pago" }).click();

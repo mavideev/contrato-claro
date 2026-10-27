@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BottomBar, FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { LegalDisclaimer } from "@/components/ui/disclaimer";
 import { RiskCounts } from "@/components/ui/pill";
 import { Title } from "@/components/ui/typography";
 import { clauseLabel, CONTRACT_LABEL } from "@/lib/analysis/presentation";
@@ -58,6 +59,8 @@ async function Report({ params }: Pick<PageProps<"/analisis/[id]/informe">, "par
         </div>
         <RiskCounts {...counts} />
       </div>
+
+      <LegalDisclaimer />
 
       <div className="flex flex-col gap-3.5">
         {flagged.map((f, i) => {
