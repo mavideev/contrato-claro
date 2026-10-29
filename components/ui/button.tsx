@@ -13,7 +13,7 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 export function buttonClass(variant: ButtonVariant = "primary", className = "") {
-  return `inline-flex min-h-12 items-center justify-center gap-2.5 rounded-[10px] px-5 text-center text-base font-semibold leading-tight no-underline transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`;
+  return `inline-flex min-h-12 items-center justify-center gap-2.5 rounded-[10px] px-5 text-center text-base font-semibold leading-tight no-underline transition-[transform,box-shadow,background-color,border-color,color] duration-150 hover:-translate-y-0.5 hover:shadow-[0_6px_14px_-6px_rgba(16,42,67,0.35)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none ${variants[variant]} ${className}`;
 }
 
 export function Button({ variant, className, ...props }: { variant?: ButtonVariant } & ComponentProps<"button">) {

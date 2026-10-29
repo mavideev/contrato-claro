@@ -69,7 +69,7 @@ async function Report({ params }: Pick<PageProps<"/analisis/[id]/informe">, "par
             <details
               key={f.id}
               open={i === 0 && f.level === "high"}
-              className="group rounded-[14px] border border-line-soft bg-surface open:border-primary"
+              className="group rounded-[14px] border border-line-soft bg-surface transition-[transform,box-shadow,border-color] duration-150 open:border-primary hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-14px_rgba(16,42,67,0.3)]"
             >
               <summary className="flex cursor-pointer list-none items-start gap-4 p-4 md:gap-[18px] md:px-6 md:py-[22px] [&::-webkit-details-marker]:hidden">
                 <span className={`mt-1.5 size-3 shrink-0 rounded-full md:size-3.5 ${LEVEL[f.level].dot} ${LEVEL[f.level].halo}`} />
@@ -104,7 +104,7 @@ async function Report({ params }: Pick<PageProps<"/analisis/[id]/informe">, "par
           );
         })}
 
-        <details className="group rounded-[14px] border border-line-soft bg-surface">
+        <details className="group rounded-[14px] border border-line-soft bg-surface transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-14px_rgba(16,42,67,0.3)]">
           <summary className="flex cursor-pointer list-none items-center gap-3 p-4 md:gap-[18px] md:px-6 md:py-[18px] [&::-webkit-details-marker]:hidden">
             <span className="size-3 shrink-0 rounded-full bg-ok md:size-3.5" />
             <span className="flex-1 text-[15px] font-bold text-ok-fg md:text-base">{clean.length} cláusulas sin alertas</span>
