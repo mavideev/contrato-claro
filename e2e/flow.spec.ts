@@ -87,14 +87,10 @@ test.describe("con un usuario nuevo", () => {
       .fill("2026-11-02");
     await page.getByRole("button", { name: "Confirmar y analizar" }).click();
 
-    // Primera visita a /estado: el server de desarrollo la compila ahí mismo,
-    // puede tardar bastante más que el resto de las rutas (más margen acá).
-    // Ya está pagado: pasa derecho a "preparando", sin mostrar el botón de pagar.
-    await expect(page).toHaveURL(/\/estado$/, { timeout: 60_000 });
-    await expect(
-      page.getByRole("heading", { name: "Preparando tu informe completo" }),
-    ).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByRole("button", { name: "Pagar con Mercado Pago" })).toHaveCount(0);
+    // Ya está pagado desde antes de subir: pasa derecho a "preparando" y, como
+    // el simulador de IA es instantáneo, puede llegar al informe sin mostrarse
+    // nunca el botón de pagar (acá nunca se hace click en él).
+    await expect(page).toHaveURL(/\/informe$/, { timeout: 60_000 });
 
     await page.goto("/analisis");
     await expect(
