@@ -17,10 +17,17 @@ export default function Page() {
   return (
     <PanelShell current="suscripcion">
       <MobileBrand />
-      <Title>Mi suscripción</Title>
-      <Suspense fallback={<div aria-hidden className="h-40 animate-pulse rounded-[14px] bg-line-soft" />}>
-        <Subscription />
-      </Suspense>
+      <div className="relative flex flex-col gap-5">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-x-6 -top-10 -z-10 h-72"
+          style={{ background: "radial-gradient(640px 420px at 12% -10%, rgba(14,124,123,0.14), transparent 65%)" }}
+        />
+        <Title>Mi suscripción</Title>
+        <Suspense fallback={<div aria-hidden className="h-40 animate-pulse rounded-[14px] bg-line-soft" />}>
+          <Subscription />
+        </Suspense>
+      </div>
     </PanelShell>
   );
 }
@@ -136,7 +143,7 @@ function PlanCard({ plan }: { plan: typeof plansTable.$inferSelect }) {
   return (
     <form
       action={subscribe.bind(null, plan.id)}
-      className={`relative flex flex-col gap-4 rounded-2xl border bg-surface p-6 ${plan.featured ? "border-primary shadow-[0_10px_28px_-14px_rgba(14,124,123,0.35)]" : "border-line-soft"}`}
+      className={`relative flex flex-col gap-4 rounded-2xl border bg-surface p-6 transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-1 hover:border-primary hover:shadow-[0_16px_32px_-18px_rgba(16,42,67,0.28)] ${plan.featured ? "border-primary shadow-[0_18px_40px_-20px_rgba(14,124,123,0.4)]" : "border-line-soft"}`}
     >
       {plan.featured && (
         <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-1 text-[11px] font-bold tracking-wide text-white uppercase">Más elegido</span>
@@ -145,7 +152,14 @@ function PlanCard({ plan }: { plan: typeof plansTable.$inferSelect }) {
         <p className="text-lg font-bold">{plan.name}</p>
         {plan.description && <p className="text-[13.5px] text-ink-3">{plan.description}</p>}
       </div>
-      <p className="font-display text-[34px] leading-none font-semibold">
+      <p className="relative font-display text-[34px] leading-none font-semibold">
+        {plan.featured && (
+          <span
+            aria-hidden
+            className="absolute -top-5 -right-2.5 -z-10 h-[90px] w-[90px] rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(14,124,123,0.18), transparent 70%)" }}
+          />
+        )}
         {formatPrice(plan.priceCents)}
         <span className="ml-1 font-sans text-sm font-semibold text-ink-3">/ mes</span>
       </p>
