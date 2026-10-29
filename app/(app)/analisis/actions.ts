@@ -178,8 +178,52 @@ async function checkout(user: CurrentUser, analysisId: string, kind: "analysis" 
   redirect(redirectUrl);
 }
 
-export async function createRecheck(id: string): Promise<void> {
+const uploadRecheckSchema = z.discriminatedUnion("method", [
+  z.object({ method: z.literal("archivo"), file: uploadedSchema }),
+  z.object({ method: z.literal("foto"), pages: z.array(uploadedSchema).min(1).max(MAX_PAGES) }),
+]);
+
+/** Versión final del día de la firma: mismo chequeo de subida que startAnalysis. */
+export async function uploadRecheck(id: string, _: FormState, form: FormData): Promise<FormState> {
   const user = await requireUser(`/analisis/${id}/rechequeo`);
-  await scoped(user.id).rechecks.create(id);
+  const parsed = uploadRecheckSchema.safeParse({ method: form.get("method"), file: json(form.get("file")), pages: json(form.get("pages")) });
+  if (!parsed.success) return { error: "No pudimos recibir el archivo. Probá de nuevo." };
+  const input = parsed.data;
+
+  const own = `users/${user.id}/uploads/`;
+  const uploaded = input.method === "archivo" ? [input.file] : input.pages;
+  for (const f of uploaded) {
+    if (!f.key.startsWith(own) || !isAllowedType(f.type) || !(await verifyUpload(f.key, { contentType: f.type, size: f.size }))) {
+      return { error: "El archivo no terminó de subirse. Probá de nuevo." };
+    }
+  }
+
+  let upload: Parameters<ReturnType<typeof scoped>["rechecks"]["upload"]>[1];
+  if (input.method === "archivo") {
+    const { key, type, size } = input.file;
+    if (type !== "application/pdf" && type !== DOCX) return { error: "Subí un PDF o un Word (.docx)." };
+    upload = { kind: type === DOCX ? "docx" : "pdf", mime: type, sizeBytes: size, storageKey: key };
+  } else {
+    if (!input.pages.every((p) => p.type.startsWith("image/"))) return { error: "Las páginas tienen que ser fotos." };
+    const first = input.pages[0];
+    upload = {
+      kind: "photo",
+      mime: first.type,
+      sizeBytes: input.pages.reduce((n, p) => n + p.size, 0),
+      storageKey: first.key,
+      pages: input.pages.map((p) => ({ storageKey: p.key, sizeBytes: p.size })),
+    };
+  }
+
+  const db = scoped(user.id);
+  const recheck = await db.rechecks.upload(id, upload);
+  if (!recheck) return { error: "Este re-chequeo no está pagado, o el análisis ya no se puede re-chequear." };
+  try {
+    await inngest.send({ name: "recheck/uploaded", data: { recheckId: recheck.id, analysisId: id, userId: user.id } });
+  } catch (err) {
+    console.error("[re-chequeo] no se pudo encolar la comparación", { analysisId: id, err });
+    return { error: "No pudimos empezar a comparar. Probá de nuevo en un rato." };
+  }
+  console.log("[re-chequeo] versión final subida, comparación encolada", { analysisId: id, method: input.method });
   redirect(`/analisis/${id}/rechequeo`);
 }

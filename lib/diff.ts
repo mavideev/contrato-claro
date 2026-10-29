@@ -4,6 +4,20 @@
 
 export type DiffSegment = { type: "same" | "del" | "ins"; text: string };
 
+/**
+ * Espacios, comillas y guiones no cuentan como cambio real (spec 05, re-chequeo):
+ * una foto puede leer " vs " o - vs – distinto sin que el contrato haya cambiado.
+ */
+export function normalizeForCompare(text: string): string {
+  return text
+    .replace(/[“”«»]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 const tokens = (s: string) => s.split(/(\s+)/).filter(Boolean);
 
 export function wordDiff(before: string, after: string): DiffSegment[] {

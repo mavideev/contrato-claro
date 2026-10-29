@@ -172,12 +172,27 @@ export function scoped(userId: string, db: Db = defaultDb()) {
       },
     },
     rechecks: {
-      /** Nuevo re-chequeo pendiente; exige un pago de re-chequeo aprobado. */
-      async create(analysisId: string) {
+      /**
+       * Versión final subida (archivo o fotos): exige un pago de re-chequeo
+       * aprobado, crea el documento (`role: "recheck"`) y el re-chequeo `pending`.
+       */
+      async upload(
+        analysisId: string,
+        upload: { kind: DocumentKind; mime: string; sizeBytes: number; storageKey: string; pages?: { storageKey: string; sizeBytes: number }[] },
+      ) {
         const payment = await this.paid(analysisId);
         if (!payment) return null;
-        const [row] = await db.insert(rechecks).values({ analysisId, paymentId: payment.id }).returning();
-        return row;
+        return db.transaction(async (tx) => {
+          const [document] = await tx
+            .insert(documents)
+            .values({ analysisId, role: "recheck", kind: upload.kind, mime: upload.mime, sizeBytes: upload.sizeBytes, storageKey: upload.storageKey, pageCount: upload.pages?.length })
+            .returning();
+          if (upload.pages?.length) {
+            await tx.insert(documentPages).values(upload.pages.map((p, i) => ({ documentId: document.id, pageNumber: i + 1, storageKey: p.storageKey })));
+          }
+          const [row] = await tx.insert(rechecks).values({ analysisId, paymentId: payment.id, documentId: document.id }).returning();
+          return row;
+        });
       },
       async paid(analysisId: string) {
         const analysis = await getAnalysis(analysisId);

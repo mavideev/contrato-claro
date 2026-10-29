@@ -1,18 +1,16 @@
 "use client";
 import Link from "next/link";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
-import { startAnalysis, type FormState } from "@/app/(app)/analisis/actions";
+import { startAnalysis, uploadRecheck, type FormState } from "@/app/(app)/analisis/actions";
 import { buttonClass } from "@/components/ui/button";
 import { compressPhoto, uploadFiles } from "./upload-client";
 
 // Móvil 3 · Escaneo. El disparador abre la cámara del celular (input con
 // `capture`, documento base §10) una vez por página; cada foto se achica y se
 // endereza en el navegador. «Listo» sube las páginas directo a S3 y arranca la
-// extracción. En el re-chequeo las fotos todavía no se suben (etapa 4).
+// extracción (o, en el re-chequeo, la comparación).
 
-type Props =
-  | { mode: "analysis" }
-  | { mode: "recheck"; analysisId: string; action: () => Promise<void> };
+type Props = { mode: "analysis" } | { mode: "recheck"; analysisId: string };
 
 type Page = { blob: Blob; type: string; url: string };
 
@@ -26,18 +24,15 @@ export function ScanScreen(props: Props) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [state, run, pending] = useActionState<FormState, void>(async (prev) => {
-    if (props.mode === "recheck") {
-      await props.action();
-      return {};
-    }
     setProgress(`Subiendo 0 de ${pages.length}…`);
     const res = await uploadFiles(pages, (done) => setProgress(`Subiendo ${done} de ${pages.length}…`));
     setProgress(null);
     if ("error" in res) return res;
     const form = new FormData();
-    form.set("contractType", "rental");
     form.set("method", "foto");
     form.set("pages", JSON.stringify(res.uploaded));
+    if (props.mode === "recheck") return uploadRecheck(props.analysisId, prev, form);
+    form.set("contractType", "rental");
     return startAnalysis(prev, form);
   }, {});
 

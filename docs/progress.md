@@ -6,15 +6,16 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 
 **Para probar a mano:** [guia-de-prueba.md](guia-de-prueba.md), paso a paso.
 
-## Cómo retomar (última actualización: 26/10/2026)
+## Cómo retomar (última actualización: 27/10/2026)
 
 ### Dónde quedamos
 
-- **Primer despliegue en Render: hecho y probado de punta a punta.** Subir contrato (PDF real, con Claude) → confirmar datos clave → pagar con Mercado Pago (de prueba y real) → webhook → informe (de ejemplo, etapa 3 todavía no está) desbloqueado. Todo probado directo en `https://contrato-claro-rolt.onrender.com`, no en local.
-- **Claude conectado:** `lib/ai/anthropic.ts` implementa `AiProvider` (fotos y PDF escaneado con bloques de imagen/documento, datos clave con salida estructurada validada con Zod). Modelo: `claude-haiku-5-5` (el más nuevo y barato al momento de conectar). Probado con un PDF real: leyó bien los datos clave, incluida una inconsistencia en el depósito que el contrato no aclaraba. Fotos todavía no probadas.
-- **Mercado Pago, lo importante para no repetir la vuelta:** con credenciales de **prueba**, la clave secreta del webhook de tu cuenta developer **no sirve** para validar la firma de pagos reales de sandbox — hay que sacarla de la cuenta **vendedor de prueba** (detalle en [deploy.md](deploy.md), sección 8). Con credenciales de **producción** anda directo, sin este problema. Ya se probó un pago real (tarjeta real, monto bajo) y cerró el circuito completo.
-- **Migraciones:** ya no dependen del Pre-Deploy Command de Render (es una feature paga). El contenedor las corre solo al arrancar (`Dockerfile`).
-- Falta: probar fotos con Claude, etapa 3 (informe real con IA), y los pendientes sueltos de siempre (ver abajo).
+- **Etapa 4 terminada (sin probar todavía en producción): re-chequeo real.** Se escribió `runRecheck` (job de Inngest, evento `recheck/uploaded`): lee la versión final subida (mismo pipeline con IA que la etapa 2), compara primero por huella SHA del archivo completo y, si no coincide, hace diff cláusula por cláusula ignorando espacios/comillas/guiones. Antes la subida no hacía nada real (las fotos del escaneo se descartaban, el botón de archivo único no mandaba el archivo) — ahora sí suben de verdad y disparan la comparación. También se agregó auto-refresh en `/rechequeo` mientras el resultado está pendiente (antes se quedaba trabada hasta recargar a mano). **Falta: que la usuaria lo pruebe en producción** (no se probó en local por indicación de ella de no gastar tokens en pruebas locales). Typecheck y lint en verde; cambio todavía sin commitear (la usuaria comitea y pushea ella misma).
+- Se armó `docs/arquitectura.md`: diagrama general de componentes (app, base de datos, storage, jobs, IA, pagos, auth) y el flujo de punta a punta de un análisis pagado.
+- **Etapa 3 terminada: informe real con IA.** Checklist propio (`lib/analysis/checklists/rental-v1.ts`, basado en la ley vigente post DNU 70/2023 — ver [normativa-alquileres.md](normativa-alquileres.md)), hallazgos reales por cláusula con cita obligatoria, revisión del documento completo (anexos, domicilios, firmantes, jurisdicción), PDF descargable con marca de agua, y aviso legal visible en vista previa/informe/re-chequeo. Probado con un contrato real lleno de trampas deliberadas: detectó la gran mayoría (índice unilateral, punitorio abusivo, comisión indebida en CABA, inconsistencias de precio y plazo, etc.).
+- **Claude conectado y probado con fotos y PDF.** Modelo: `claude-haiku-5-5`. Costo real medible en `/admin`: centavos de dólar por análisis completo.
+- **Primer despliegue en Render: probado de punta a punta**, con pago de prueba y pago real. Detalle de Mercado Pago (la clave del webhook hay que sacarla de la cuenta **vendedor de prueba**, no de tu cuenta developer) en [deploy.md](deploy.md), sección 8.
+- **Pendiente conocido, no urgente:** la extracción de fotos/PDF a veces mete encabezados, pies de página o marcas de agua repetidas dentro del texto de una cláusula (ensucia lo que se ve en el informe). Un test de Playwright en CI sigue siendo flaky (no afecta producción, ver el comentario arriba del test en `e2e/flow.spec.ts`).
 
 ### Ramas
 
@@ -40,11 +41,12 @@ Todo está en `main` (etapas 0, 1 y 2) y se trabaja directo ahí, sin ramas apar
 
 ### Próximos pasos, en orden
 
-1. Probar fotos con Claude (`lib/ai/anthropic.ts`, `readPages`) — pendiente, solo se probó PDF con texto.
+1. **Probar etapa 4 en producción** (re-chequeo real): pagar el extra, subir la versión final (archivo y foto), confirmar que compara bien y que el "comparando" se actualiza solo. Si funciona: comitear, actualizar `CHANGELOG.md` y subir `package.json` a `0.4.0` (mensaje de commit ya preparado, quedó en el chat).
 2. Verificación completa de `deploy.md` (paso 9): mails de verificación/link mágico, `/analisis` sin sesión, IP detrás del proxy (punto 9.8, sigue pendiente).
-3. Etapa 3: el informe con IA (checklist, semáforo, citas, PDF) — hoy el informe es de ejemplo (`lib/analysis/sample-report.ts`).
+3. Limpiar encabezados/pies de página repetidos en la extracción de fotos/PDF (se cuelan en el texto de las cláusulas).
 4. Pendientes sueltos: borrar un análisis suelto, captcha, aviso de foto borrosa, regla de vencimiento para subidas abandonadas en S3 y la pregunta abierta 2.
-5. CI: un test de Playwright (`e2e/flow.spec.ts`, "subir → confirmar → vista previa...") falla intermitente — el servidor hace todo bien, pero el navegador a veces no refleja la navegación a `/estado`. No pasa en producción (probado a mano). Detalle en el comentario arriba del test.
+5. CI: el mismo test de Playwright flaky de siempre (no afecta producción).
+6. Etapa 5 (RAG con normativa versionada) y etapa 6 (cierre) — más adelante.
 
 ## Etapas del proyecto
 
@@ -54,9 +56,9 @@ El plan completo está en el [documento base, §9](../documento-base-mvp-v0.2.md
 |---|---|---|
 | 0. Base | repositorio, Docker, base de datos, cuentas, pantallas, webhook, subida a S3, CI | ✅ desplegado en Render |
 | 1. Cuentas y pago | Mercado Pago real con webhook | ✅ probado con pago real y de prueba |
-| 2. Captura y extracción | foto, PDF, Word y texto → cláusulas | 🟡 Claude conectado y probado con PDF; falta probar fotos |
-| 3. Informe de alquileres | checklist, semáforo, citas, PDF | ⏳ |
-| 4. Re-chequeo | huellas, comparación, certificado | ⏳ |
+| 2. Captura y extracción | foto, PDF, Word y texto → cláusulas | ✅ Claude conectado, probado con fotos y PDF |
+| 3. Informe de alquileres | checklist, semáforo, citas, PDF | ✅ probado con un contrato real |
+| 4. Re-chequeo | huellas, comparación, certificado | 🟡 job de comparación escrito, falta que la usuaria lo pruebe en producción (sin comitear) |
 | 5. Normativa (RAG) | normas versionadas y búsqueda | ⏳ |
 | 6. Cierre | revisión humana, calidad de fotos, decisión sobre la app | ⏳ |
 

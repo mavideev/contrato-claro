@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
-import { createRecheck, startRecheckPayment } from "@/app/(app)/analisis/actions";
+import { startRecheckPayment } from "@/app/(app)/analisis/actions";
+import { AutoRefresh } from "@/components/app/auto-refresh";
 import { BottomBar, FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { RecheckUpload } from "@/components/app/recheck-upload";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -52,7 +53,7 @@ async function Recheck({ params }: Pick<PageProps<"/analisis/[id]/rechequeo">, "
       <ButtonLink href={`/analisis/nuevo/escanear?rechequeo=${id}`} variant="outline" className="flex-1 md:hidden">
         Escanear final
       </ButtonLink>
-      <RecheckUpload action={createRecheck.bind(null, id)} className="flex-1 md:flex-none" />
+      <RecheckUpload analysisId={id} className="flex-1 md:flex-none" />
     </div>
   );
 
@@ -102,7 +103,12 @@ async function Recheck({ params }: Pick<PageProps<"/analisis/[id]/rechequeo">, "
   let body: ReactNode;
 
   if (latest.result === "pending") {
-    body = <Banner tone="info">Estamos comparando las dos versiones. Suele tardar menos de un minuto.</Banner>;
+    body = (
+      <>
+        <AutoRefresh />
+        <Banner tone="info">Estamos comparando las dos versiones. Suele tardar menos de un minuto.</Banner>
+      </>
+    );
   } else if (latest.result === "failed") {
     body = (
       <>

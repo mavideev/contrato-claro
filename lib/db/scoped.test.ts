@@ -9,6 +9,7 @@ import { SAMPLE_PREVIEW } from "@/lib/analysis/sample";
 
 let demoId: string;
 let otherId: string;
+const uploadStub = { kind: "pdf" as const, mime: "application/pdf", sizeBytes: 10, storageKey: "users/x/uploads/stub" };
 
 beforeAll(async () => {
   const find = async (email: string) => {
@@ -79,7 +80,7 @@ describe("scoped(): escrituras", () => {
     const [ajeno] = await scoped(otherId).analyses.list();
     expect(await scoped(demoId).analyses.confirm(ajeno.id, confirmValues)).toBeNull();
     expect(await scoped(demoId).payments.start(ajeno.id, "analysis", 0)).toBeNull();
-    expect(await scoped(demoId).rechecks.create(ajeno.id)).toBeNull();
+    expect(await scoped(demoId).rechecks.upload(ajeno.id, uploadStub)).toBeNull();
     expect(await scoped(demoId).analyses.get("no-es-un-uuid")).toBeNull();
   });
 
@@ -102,6 +103,6 @@ describe("scoped(): escrituras", () => {
     // En el seed, solo el de «Firma hoy» tiene el re-chequeo pagado.
     expect(results.filter(Boolean)).toHaveLength(1);
     const unpaid = ready[results.findIndex((r) => !r)];
-    expect(await scoped(demoId).rechecks.create(unpaid.id)).toBeNull();
+    expect(await scoped(demoId).rechecks.upload(unpaid.id, uploadStub)).toBeNull();
   });
 });
