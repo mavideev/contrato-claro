@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { analyses, plans, subscriptionCycles, subscriptions, user } from "@/db/schema";
+import { analyses, payments, plans, subscriptionCycles, subscriptions, user } from "@/db/schema";
 import { db, sql } from "@/lib/db";
 import { scoped } from "@/lib/db/scoped";
 import { SAMPLE_PREVIEW } from "@/lib/analysis/sample";
@@ -95,6 +95,29 @@ describe("scoped(): escrituras", () => {
       expect(first?.status).toBe("pending");
     } finally {
       await db().delete(analyses).where(eq(analyses.id, a.id));
+    }
+  });
+
+  it("pagar antes de subir: no duplica, se une al análisis y se devuelve si falla (spec 06)", async () => {
+    const me = scoped(demoId);
+    const first = await me.payments.startPrepaid("analysis", 1_000_00);
+    const second = await me.payments.startPrepaid("analysis", 1_000_00);
+    expect(second.id).toBe(first.id);
+    expect(await me.payments.latestPrepaid("analysis")).toMatchObject({ id: first.id });
+
+    const a = await me.analyses.createFromUpload(uploadStub);
+    try {
+      await me.payments.linkPrepaid(first.id, a.id);
+      expect(await me.payments.latestPrepaid("analysis")).toBeNull();
+      const [linked] = await db().select().from(payments).where(eq(payments.id, first.id));
+      expect(linked.analysisId).toBe(a.id);
+
+      // Si no se pudo leer el contrato, el pago se desvincula y vuelve a estar disponible.
+      await me.analyses.markFailed(a.id, "unreadable");
+      expect(await me.payments.latestPrepaid("analysis")).toMatchObject({ id: first.id });
+    } finally {
+      await db().delete(analyses).where(eq(analyses.id, a.id));
+      await db().delete(payments).where(eq(payments.id, first.id));
     }
   });
 
@@ -198,18 +221,20 @@ describe("scoped(): suscripciones (spec 06)", () => {
     }
   });
 
-  it("markPaidBySubscription solo pasa a paid un análisis de suscripción en vista previa", async () => {
+  it("markPaid solo pasa a paid un análisis que esté en vista previa, una sola vez", async () => {
     const { cycle } = await authorizedCycle();
     const me = scoped(subUserId);
     const subscriptionAnalysis = await me.analyses.createFromUpload({ kind: "pdf", mime: "application/pdf", sizeBytes: 10, storageKey: "x", subscriptionCycleId: cycle.id });
-    const oneTimeAnalysis = await me.analyses.create({ status: "preview_ready" });
+    const oneTimeAnalysis = await me.analyses.create({ status: "ready" });
     try {
       await db().update(analyses).set({ status: "preview_ready" }).where(eq(analyses.id, subscriptionAnalysis.id));
-      expect(await me.analyses.markPaidBySubscription(subscriptionAnalysis.id)).toBe(true);
-      expect(await me.analyses.markPaidBySubscription(oneTimeAnalysis.id)).toBe(false);
+      expect(await me.analyses.markPaid(subscriptionAnalysis.id)).toBe(true);
+      expect(await me.analyses.markPaid(subscriptionAnalysis.id)).toBe(false);
+      // No está en vista previa (ya está "ready"): markPaid no lo toca.
+      expect(await me.analyses.markPaid(oneTimeAnalysis.id)).toBe(false);
 
       const [row] = await db().select({ status: analyses.status }).from(analyses).where(eq(analyses.id, oneTimeAnalysis.id));
-      expect(row.status).toBe("preview_ready");
+      expect(row.status).toBe("ready");
     } finally {
       await db().delete(analyses).where(inArray(analyses.id, [subscriptionAnalysis.id, oneTimeAnalysis.id]));
     }

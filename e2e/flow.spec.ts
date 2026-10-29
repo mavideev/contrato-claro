@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { contractDocx, contractPdf, sampleContracts } from "../evals/fixtures";
-import { deleteAccount, seedIds, signUpAndVerify } from "./helpers";
+import { deleteAccount, payForAnalysis, seedIds, signUpAndVerify } from "./helpers";
 
 // Recorridos del flujo del análisis (spec 03). Los que crean datos usan un
 // usuario nuevo y lo borran al final, para no tocar el seed. La extracción
@@ -32,12 +32,7 @@ test.describe("con un usuario nuevo", () => {
     await deleteAccount(page);
   });
 
-  // ⚠️ Falla intermitente en CI (no en producción, probado a mano en Render):
-  // el servidor deja el análisis en `preview_ready` bien (confirmado por log),
-  // pero el navegador a veces se queda en /confirmar y nunca refleja la
-  // navegación a /estado. Parece un tema puntual de Next.js en modo desarrollo
-  // con este redirect-después-de-Server-Action. Pendiente de investigar a fondo.
-  test("subir → confirmar → vista previa → pagar → pago pendiente", async ({
+  test("sin elegir cómo pagar, no deja subir; con el pago pendiente, tampoco", async ({
     page,
     request,
   }, info) => {
@@ -46,6 +41,34 @@ test.describe("con un usuario nuevo", () => {
       "el recorrido con archivo se prueba en desktop",
     );
     await signUpAndVerify(page, request);
+    // Spec 06: hay que elegir plan o pagar antes de poder subir nada.
+    await expect(page.getByText("Antes de subir el contrato, elegí cómo lo pagás.")).toBeVisible();
+    await page.getByRole("button", { name: "Pagar con Mercado Pago" }).click();
+
+    // Sin credenciales de Mercado Pago, el checkout es el simulador.
+    await expect(page).toHaveURL(/\/pago\/simulador\?pago=/);
+    await page.getByRole("button", { name: "Dejarlo pendiente" }).click();
+    await expect(page).toHaveURL(/\/analisis\/nuevo$/);
+    await expect(page.getByText("Estamos esperando que se confirme tu pago.")).toBeVisible();
+
+    await deleteAccount(page);
+  });
+
+  // ⚠️ Falla intermitente en CI (no en producción, probado a mano en Render):
+  // el servidor deja el análisis en `preview_ready` bien (confirmado por log),
+  // pero el navegador a veces se queda en /confirmar y nunca refleja la
+  // navegación a /estado. Parece un tema puntual de Next.js en modo desarrollo
+  // con este redirect-después-de-Server-Action. Pendiente de investigar a fondo.
+  test("pagar antes de subir → confirmar → informe, sin volver a pagar", async ({
+    page,
+    request,
+  }, info) => {
+    test.skip(
+      info.project.name !== "desktop",
+      "el recorrido con archivo se prueba en desktop",
+    );
+    await signUpAndVerify(page, request);
+    await payForAnalysis(page);
     await expect(
       page.getByRole("button", { name: /Compraventa/ }),
     ).toBeDisabled();
@@ -66,45 +89,31 @@ test.describe("con un usuario nuevo", () => {
 
     // Primera visita a /estado: el server de desarrollo la compila ahí mismo,
     // puede tardar bastante más que el resto de las rutas (más margen acá).
+    // Ya está pagado: pasa derecho a "preparando", sin mostrar el botón de pagar.
     await expect(page).toHaveURL(/\/estado$/, { timeout: 60_000 });
     await expect(
-      page.getByRole("heading", { name: "Tu vista previa está lista" }),
+      page.getByRole("heading", { name: "Preparando tu informe completo" }),
     ).toBeVisible({ timeout: 60_000 });
-    await expect(
-      page.getByText("extra, lo comprás cuando lo necesites"),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Pagar con Mercado Pago" }).click();
-
-    // Sin credenciales de Mercado Pago, el checkout es el simulador.
-    await expect(page).toHaveURL(/\/pago\/simulador\?pago=/);
-    await page.getByRole("button", { name: "Dejarlo pendiente" }).click();
-    await expect(page).toHaveURL(/\/pago\/retorno\?analisis=/);
-    await expect(
-      page.getByRole("heading", { name: "Tu pago está pendiente" }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Pagar con Mercado Pago" })).toHaveCount(0);
 
     await page.goto("/analisis");
     await expect(
       page.getByText("Alquiler de vivienda · Av. Corrientes 1234, 5° B"),
     ).toBeVisible();
-    await expect(page.getByText("Pago pendiente").filter({ visible: true })).toBeVisible();
     await deleteAccount(page);
   });
 
   test("pagar en el simulador desbloquea el informe y el re-chequeo (etapa 1)", async ({ page, request }, info) => {
     test.skip(info.project.name !== "desktop", "un solo recorrido alcanza");
     await signUpAndVerify(page, request);
+    await payForAnalysis(page);
     await pasteContract(page);
     await page.getByRole("button", { name: "Confirmar y analizar" }).click();
-    // Primera visita a /estado: el server de desarrollo la compila ahí mismo.
+    // Ya está pagado desde antes de subir: pasa derecho a "preparando".
     await expect(page).toHaveURL(/\/estado$/, { timeout: 60_000 });
-    await page.getByRole("button", { name: "Pagar con Mercado Pago" }).click();
-
-    await page.getByRole("button", { name: "Aprobar el pago" }).click();
-    await expect(page.getByRole("heading", { name: "Pago aprobado" })).toBeVisible();
-    await page.getByRole("link", { name: "Ver mi informe" }).click();
 
     // El job de Inngest corre el análisis real (con el simulador, sin ANTHROPIC_API_KEY).
+    // La pantalla se actualiza sola hasta que el informe está listo.
     await expect(page).toHaveURL(/\/informe$/, { timeout: 60_000 });
     // Las 14 partes del contrato pegado (encabezado + 13 cláusulas); este contrato
     // de muestra no tiene ambigüedades según el checklist, así que no da hallazgos.
@@ -125,6 +134,7 @@ test.describe("con un usuario nuevo", () => {
   test("subir un PDF y un Word: los datos salen del archivo (etapa 2)", async ({ page, request }, info) => {
     test.skip(info.project.name !== "desktop", "el recorrido con archivo se prueba en desktop");
     await signUpAndVerify(page, request);
+    await payForAnalysis(page);
     const [, guiones, articulos] = sampleContracts();
 
     const pdf = Buffer.from(await contractPdf(articulos.text, 10));
@@ -140,6 +150,7 @@ test.describe("con un usuario nuevo", () => {
     await expect(page.getByLabel("Plazo")).toHaveValue("36 meses");
 
     await page.goto("/analisis/nuevo");
+    await payForAnalysis(page);
     await page.getByLabel("Archivo del contrato").setInputFiles({ name: "contrato.docx", mimeType: "", buffer: Buffer.from(await contractDocx(guiones.text)) });
     await page.getByRole("button", { name: "Analizar contrato" }).click();
     await expect(page).toHaveURL(/\/confirmar$/, { timeout: 30_000 });
@@ -151,12 +162,15 @@ test.describe("con un usuario nuevo", () => {
   test("un archivo que no se puede abrir muestra el motivo y deja subir otro", async ({ page, request }, info) => {
     test.skip(info.project.name !== "desktop", "un solo recorrido alcanza");
     await signUpAndVerify(page, request);
+    await payForAnalysis(page);
     await page.getByLabel("Archivo del contrato").setInputFiles({ name: "roto.pdf", mimeType: "application/pdf", buffer: Buffer.from("no soy un pdf") });
     await page.getByRole("button", { name: "Analizar contrato" }).click();
     await expect(page.getByRole("heading", { name: "No pudimos leer tu contrato" })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("No pudimos abrir el archivo.")).toBeVisible();
     await page.getByRole("link", { name: "Subir otro archivo" }).click();
     await expect(page).toHaveURL(/\/analisis\/nuevo$/);
+    // No se pudo leer: el pago se devuelve, no hay que volver a elegir cómo pagar (spec 06).
+    await expect(page.getByText("Antes de subir el contrato, elegí cómo lo pagás.")).toHaveCount(0);
 
     await page.goto("/analisis");
     await expect(page.getByText("No se pudo leer").filter({ visible: true })).toBeVisible();
@@ -169,6 +183,7 @@ test.describe("con un usuario nuevo", () => {
   }, info) => {
     test.skip(info.project.name !== "mobile", "la cámara es solo mobile");
     await signUpAndVerify(page, request);
+    await payForAnalysis(page);
     await expect(
       page.getByRole("button", { name: /Sacar foto/ }),
     ).toHaveAttribute("aria-pressed", "true");

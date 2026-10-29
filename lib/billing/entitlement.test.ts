@@ -2,9 +2,18 @@
 import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { plans, subscriptionCycles, subscriptions, user } from "@/db/schema";
+import { analyses, payments, plans, subscriptionCycles, subscriptions, user } from "@/db/schema";
 import { db, sql } from "@/lib/db";
-import { ensureQuota } from "./entitlement";
+import { analysisEntitlement, ensureQuota } from "./entitlement";
+
+/** Usuario descartable, sin nada de datos del seed ni de otros tests. */
+async function throwawayUser() {
+  const [row] = await db()
+    .insert(user)
+    .values({ id: randomUUID(), name: "Test", email: `test-${randomUUID()}@contratoclaro.local`, emailVerified: true })
+    .returning();
+  return row.id;
+}
 
 let userId: string;
 let planId: string;
@@ -50,5 +59,50 @@ describe("ensureQuota()", () => {
   it("páginas extra (top-up) suman al cupo", async () => {
     await authorizedCycle({ pagesUsed: 10, extraPagesGranted: 5 });
     expect((await ensureQuota(userId)).ok).toBe(true);
+  });
+});
+
+describe("analysisEntitlement()", () => {
+  it("sin suscripción ni pago, hay que elegir cómo pagar", async () => {
+    const u = await throwawayUser();
+    try {
+      expect(await analysisEntitlement(u)).toEqual({ mode: "none" });
+    } finally {
+      await db().delete(user).where(eq(user.id, u));
+    }
+  });
+
+  it("con un pago de análisis ya aprobado y sin usar, prepaid", async () => {
+    const u = await throwawayUser();
+    try {
+      const [payment] = await db().insert(payments).values({ userId: u, kind: "analysis", status: "approved", amountCents: 100_000 }).returning();
+      expect(await analysisEntitlement(u)).toEqual({ mode: "prepaid", paymentId: payment.id });
+    } finally {
+      await db().delete(payments).where(eq(payments.userId, u));
+      await db().delete(user).where(eq(user.id, u));
+    }
+  });
+
+  it("con el pago todavía pendiente, pending", async () => {
+    const u = await throwawayUser();
+    try {
+      await db().insert(payments).values({ userId: u, kind: "analysis", status: "pending", amountCents: 100_000 });
+      expect(await analysisEntitlement(u)).toEqual({ mode: "pending" });
+    } finally {
+      await db().delete(payments).where(eq(payments.userId, u));
+      await db().delete(user).where(eq(user.id, u));
+    }
+  });
+
+  it("un pago ya usado (con analysisId) no cuenta como prepago disponible", async () => {
+    const u = await throwawayUser();
+    try {
+      const [analysis] = await db().insert(analyses).values({ userId: u, status: "ready" }).returning();
+      await db().insert(payments).values({ userId: u, analysisId: analysis.id, kind: "analysis", status: "approved", amountCents: 100_000 });
+      expect(await analysisEntitlement(u)).toEqual({ mode: "none" });
+    } finally {
+      await db().delete(analyses).where(eq(analyses.userId, u));
+      await db().delete(user).where(eq(user.id, u));
+    }
   });
 });

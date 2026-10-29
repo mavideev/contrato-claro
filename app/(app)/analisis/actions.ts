@@ -5,7 +5,7 @@ import { z } from "zod";
 import { FIELDS } from "@/lib/analysis/fields";
 import { samplePreview } from "@/lib/analysis/sample-report";
 import { requireUser, type CurrentUser } from "@/lib/auth/session";
-import { ensureQuota } from "@/lib/billing/entitlement";
+import { analysisEntitlement } from "@/lib/billing/entitlement";
 import { scoped } from "@/lib/db/scoped";
 import { env } from "@/lib/env";
 import { inngest } from "@/lib/inngest/client";
@@ -103,14 +103,16 @@ export async function startAnalysis(_: FormState, form: FormData): Promise<FormS
     upload = { kind: "text", mime: "text/plain", sizeBytes: body.byteLength, storageKey: key };
   }
 
-  const quota = await ensureQuota(user.id);
-  if (!quota.ok && quota.reason === "sin_cupo") {
-    return { error: "Llegaste al tope de páginas de este mes. Podés esperar al próximo ciclo o comprar páginas extra desde Mi suscripción." };
+  // "Pagar antes de subir": sin suscripción con cupo ni un pago ya aprobado, no se sube nada.
+  const entitlement = await analysisEntitlement(user.id);
+  if (entitlement.mode === "none" || entitlement.mode === "pending") {
+    return { error: "Elegí cómo pagar antes de subir el contrato." };
   }
-  if (quota.ok) upload.subscriptionCycleId = quota.subscriptionCycleId;
+  if (entitlement.mode === "subscription") upload.subscriptionCycleId = entitlement.subscriptionCycleId;
 
   const db = scoped(user.id);
   const analysis = await db.analyses.createFromUpload(upload);
+  if (entitlement.mode === "prepaid") await db.payments.linkPrepaid(entitlement.paymentId, analysis.id);
   try {
     await inngest.send({ name: "analysis/uploaded", data: { analysisId: analysis.id, userId: user.id } });
   } catch (err) {
@@ -153,6 +155,13 @@ export async function confirmAnalysis(id: string, _: FormState, form: FormData):
     return { error: "Este análisis ya no se puede editar." };
   }
   console.log("[análisis] datos clave confirmados", { analysisId: id });
+
+  // Ya se pagó antes de subir (suscripción con cupo, o pago de análisis aprobado):
+  // pasa derecho a "pagado", sin mostrar el botón de pagar.
+  const alreadyPaid = row.billingMode === "subscription" || (await db.payments.latest(id, "analysis"))?.status === "approved";
+  if (alreadyPaid && (await db.analyses.markPaid(id))) {
+    await inngest.send({ id: `analysis-paid-${id}`, name: "analysis/paid", data: { analysisId: id } });
+  }
   redirect(`/analisis/${id}/estado`);
 }
 
@@ -161,14 +170,36 @@ export async function startPayment(id: string): Promise<void> {
   const db = scoped(user.id);
   const analysis = await db.analyses.get(id);
   if (!analysis) redirect("/analisis");
-  // Suscripción (spec 06): el cupo ya se reservó al subir, no hay pago puntual.
-  if (analysis.billingMode === "subscription") {
-    if (await db.analyses.markPaidBySubscription(id)) {
+  // Suscripción (spec 06) o ya pagado antes de subir: no hace falta un pago puntual.
+  // (Con el flujo nuevo esto ya se resuelve en confirmAnalysis; queda como respaldo.)
+  const alreadyPaid = analysis.billingMode === "subscription" || (await db.payments.latest(id, "analysis"))?.status === "approved";
+  if (alreadyPaid) {
+    if (await db.analyses.markPaid(id)) {
       await inngest.send({ id: `analysis-paid-${id}`, name: "analysis/paid", data: { analysisId: id } });
     }
     redirect(`/pago/retorno?analisis=${id}`);
   }
   await checkout(user, id, "analysis");
+}
+
+/** Pagar un análisis antes de subir el contrato ("pagar antes de subir"). */
+export async function prepayAnalysis(): Promise<void> {
+  const user = await requireUser("/analisis/nuevo");
+  const db = scoped(user.id);
+  const payment = await db.payments.startPrepaid("analysis", priceCents("analysis"));
+  const returnPath = "/analisis/nuevo";
+  if (payment.status === "approved") redirect(returnPath);
+  if (payment.status === "pending" && payment.mpPreferenceId) redirect(returnPath);
+
+  const { redirectUrl, preferenceId } = await paymentProvider().createCheckout({
+    paymentId: payment.id,
+    title: "Análisis de contrato de alquiler",
+    amountCents: payment.amountCents,
+    payerEmail: user.email,
+    returnUrl: `${env().APP_URL}${returnPath}`,
+  });
+  if (preferenceId) await db.payments.setPreference(payment.id, preferenceId);
+  redirect(redirectUrl);
 }
 
 export async function startRecheckPayment(id: string): Promise<void> {

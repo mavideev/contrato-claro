@@ -37,5 +37,7 @@ export async function simulatePayment(paymentId: string, status: PaymentStatus):
   if (!res.ok) throw new Error(`El webhook respondió ${res.status}`);
 
   if (payment.kind === "topup") redirect("/suscripcion");
+  // Análisis pagado antes de subir el contrato (spec 06): todavía no tiene analysisId.
+  if (payment.kind === "analysis" && !payment.analysisId) redirect("/analisis/nuevo");
   redirect(`/pago/retorno?analisis=${payment.analysisId}${payment.kind === "recheck" ? "&tipo=rechequeo" : ""}`);
 }

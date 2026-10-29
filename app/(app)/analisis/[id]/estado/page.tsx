@@ -94,7 +94,7 @@ async function Status({ params }: Pick<PageProps<"/analisis/[id]/estado">, "para
 
         {preview && status !== "failed" && (
           <section className="flex flex-col gap-3.5 rounded-2xl border border-line-soft bg-surface px-5 py-[22px] md:max-w-[560px] md:flex-[999_1_480px] md:gap-[18px] md:p-8">
-            <Kicker>Vista previa gratuita</Kicker>
+            <Kicker>{paid ? "Resumen" : "Vista previa gratuita"}</Kicker>
             <RiskCounts {...preview} />
             <LegalDisclaimer />
             <div aria-hidden className="flex flex-col gap-2.5">

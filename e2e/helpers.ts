@@ -60,6 +60,18 @@ export async function signUpAndVerify(page: Page, request: APIRequestContext) {
   return { email, password };
 }
 
+/**
+ * Paga un análisis antes de subir el contrato (spec 06, "elegí cómo pagar").
+ * Deja a `page` de vuelta en /analisis/nuevo, ya con el formulario de subida.
+ */
+export async function payForAnalysis(page: Page) {
+  await expect(page).toHaveURL(/\/analisis\/nuevo$/);
+  await page.getByRole("button", { name: "Pagar con Mercado Pago" }).click();
+  await expect(page).toHaveURL(/\/pago\/simulador\?pago=/);
+  await page.getByRole("button", { name: "Aprobar el pago" }).click();
+  await expect(page).toHaveURL(/\/analisis\/nuevo$/);
+}
+
 /** Borra la cuenta desde /cuenta (limpieza al final de un test). */
 export async function deleteAccount(page: Page) {
   await page.goto("/cuenta");

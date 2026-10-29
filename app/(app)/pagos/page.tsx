@@ -59,7 +59,7 @@ async function Payments() {
                 {a.propertyLabel ? ` · ${a.propertyLabel}` : ""}
               </Link>
             ) : (
-              <span className="truncate text-sm text-ink-3">Suscripción</span>
+              <span className="truncate text-sm text-ink-3">{p.kind === "analysis" ? "Todavía sin usar" : "Suscripción"}</span>
             )}
           </div>
           <span className="text-sm text-ink-3">{formatDay(p.createdAt)}</span>

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { NonRetriableError } from "inngest";
-import { analyses, clauses as clausesTable, documents, subscriptionCycles } from "@/db/schema";
+import { analyses, clauses as clausesTable, documents, payments, subscriptionCycles } from "@/db/schema";
 import { aiProvider } from "@/lib/ai/provider";
 import { db } from "@/lib/db";
 import { splitClauses } from "@/lib/extraction/clauses";
@@ -93,8 +93,14 @@ async function originalDocument(analysisId: string) {
 }
 
 async function fail(analysisId: string, code: string) {
-  await db()
-    .update(analyses)
-    .set({ status: "failed", errorCode: code })
-    .where(and(eq(analyses.id, analysisId), eq(analyses.status, "extracting")));
+  await db().transaction(async (tx) => {
+    const [row] = await tx
+      .update(analyses)
+      .set({ status: "failed", errorCode: code })
+      .where(and(eq(analyses.id, analysisId), eq(analyses.status, "extracting")))
+      .returning({ id: analyses.id });
+    if (!row) return;
+    // No se pudo leer: si se había pagado antes de subir (spec 06), se devuelve el crédito.
+    await tx.update(payments).set({ analysisId: null }).where(and(eq(payments.analysisId, analysisId), eq(payments.kind, "analysis")));
+  });
 }

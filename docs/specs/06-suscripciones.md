@@ -10,6 +10,8 @@ Reemplazar el pago único por análisis por una **suscripción mensual con cobro
 
 El pago por análisis de la spec 04 sigue activo (Checkout Pro) para quien no se suscriba, pero el negocio quiere previsibilidad de ingresos y que analizar varios contratos en el mes no implique pagar uno por uno. El cupo de páginas (en vez de "cantidad de análisis") existe porque el costo real de IA escala con el tamaño del contrato, no con la cantidad de veces que se usa.
 
+**Cambio del 28/10/2026 (decisión de negocio):** antes, cualquiera podía subir un contrato y ver la vista previa gratis — el costo de leerlo con IA se pagaba igual, lo eligiera o no quien lo subía. Ahora hay que elegir cómo pagar (suscripción o pago único) **antes** de poder subir nada: nadie gasta IA sin haber elegido cómo lo cubre.
+
 ## Flujo
 
 1. La usuaria se suscribe a un plan (`/suscripcion`). Se crea una **Preapproval** en Mercado Pago (cobro recurrente mensual) y se redirige a `init_point`, igual que hoy con Checkout Pro pero con otro endpoint.
@@ -19,8 +21,9 @@ El pago por análisis de la spec 04 sigue activo (Checkout Pro) para quien no se
    - `authorized` → crea/activa la suscripción y abre un ciclo nuevo (`subscription_cycles`) con el cupo de páginas del plan;
    - `authorized_payment` → cierra el ciclo vencido y abre el siguiente con el cupo completo de nuevo;
    - `paused`/`cancelled` → actualiza el estado de la suscripción.
-3. Antes de subir un contrato (análisis nuevo o re-chequeo), el servidor valida que haya suscripción activa y cupo disponible en el ciclo actual. Si no alcanza, ofrece comprar páginas extra (un pago único de Checkout Pro, como hoy, pero sin ligarlo a un análisis puntual).
-4. El cupo se descuenta recién cuando se sabe la cantidad real de páginas leídas (al terminar la extracción), no al empezar a subir el archivo — así no se descuenta de más si el archivo no se puede leer.
+3. Antes de subir un contrato nuevo, `/analisis/nuevo` exige elegir cómo pagar: con suscripción activa y cupo disponible, se sube directo; sin eso, hay que suscribirse o pagar un análisis puntual (Checkout Pro, igual que la spec 04, pero el pago se crea **antes** de que exista el análisis — `payments.analysisId` queda `null` hasta que se sube el archivo). Mientras Mercado Pago no confirma ese pago, la pantalla se actualiza sola hasta que se apruebe.
+4. Al subir, si el pago ya estaba aprobado (o hay cupo), se une al análisis recién creado y, al confirmar los datos clave, pasa derecho a "pagado" — no hay un segundo paso de pago después de la vista previa. El re-chequeo funciona igual que antes (spec 04): se paga o se usa cupo en el momento de pedirlo, ya antes de subir la versión final.
+5. El cupo (o el pago puntual) se descuenta/une recién cuando se sabe que el contrato se pudo leer (al terminar la extracción). Si falla la lectura, se devuelve: el cupo nunca se restó y el pago puntual se desvincula del análisis fallido, quedando disponible para el siguiente intento.
 
 ## Modelo de datos (nuevo)
 
@@ -34,7 +37,7 @@ El pago por análisis de la spec 04 sigue activo (Checkout Pro) para quien no se
 
 ## Quiénes conviven
 
-Quien no se suscribe sigue con el pago por análisis de la spec 04, sin cambios. Los dos modelos conviven: cada análisis queda marcado con cuál de los dos usó.
+Quien no se suscribe sigue pagando por análisis (spec 04), pero ahora **antes** de subir el contrato, no después de la vista previa. Los dos modelos (suscripción y pago único) conviven: cada análisis queda marcado con cuál de los dos usó.
 
 ## Cómo se define el cupo de cada plan
 
@@ -47,7 +50,8 @@ El costo real de IA por página todavía tiene poca data histórica (la medició
 - [ ] Si no hay cupo, se ofrece comprar páginas extra en vez de bloquear sin alternativa.
 - [ ] El cobro mensual (`authorized_payment`) abre un ciclo nuevo con el cupo completo, sin arrastrar lo que sobró del mes anterior.
 - [ ] Pausar o cancelar la suscripción impide empezar análisis nuevos sin romper los que ya están en curso.
-- [ ] Quien sigue con pago por análisis (sin suscripción) no nota ningún cambio.
+- [x] Sin suscripción activa ni pago aprobado, `/analisis/nuevo` no deja subir nada: hay que elegir plan o pagar antes.
+- [x] Si el contrato pagado por adelantado no se puede leer, el pago se desvincula y queda disponible para reintentar sin pagar de nuevo.
 
 ## Fuera de alcance (por ahora)
 

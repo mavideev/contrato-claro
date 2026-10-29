@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import {
   analyses,
   clauses,
@@ -131,7 +131,16 @@ export function scoped(userId: string, db: Db = defaultDb()) {
       /** No se pudo encolar la extracción: el análisis queda como fallido. */
       async markFailed(id: string, errorCode: string) {
         if (!UUID.test(id)) return;
-        await db.update(analyses).set({ status: "failed", errorCode }).where(and(ownAnalysis(id), eq(analyses.status, "extracting")));
+        await db.transaction(async (tx) => {
+          const [row] = await tx
+            .update(analyses)
+            .set({ status: "failed", errorCode })
+            .where(and(ownAnalysis(id), eq(analyses.status, "extracting")))
+            .returning({ id: analyses.id });
+          if (!row) return;
+          // Si se había pagado antes de subir (spec 06), se devuelve el crédito.
+          await tx.update(payments).set({ analysisId: null }).where(and(eq(payments.analysisId, id), eq(payments.kind, "analysis")));
+        });
       },
       /** Contrato original subido (para saber si vino de una foto). */
       async original(id: string) {
@@ -158,12 +167,16 @@ export function scoped(userId: string, db: Db = defaultDb()) {
           .returning();
         return row ?? null;
       },
-      /** Suscripción con cupo (spec 06): pasa a "paid" sin pago puntual, listo para analizar. */
-      async markPaidBySubscription(id: string) {
+      /**
+       * Pasa de "vista previa" a "pagado" sin un pago puntual nuevo (spec 06 y
+       * "pagar antes de subir"): lo llama quien ya verificó que corresponde
+       * (cupo de suscripción reservado, o pago de análisis ya aprobado).
+       */
+      async markPaid(id: string) {
         const [row] = await db
           .update(analyses)
           .set({ status: "paid" })
-          .where(and(ownAnalysis(id), eq(analyses.status, "preview_ready"), eq(analyses.billingMode, "subscription")))
+          .where(and(ownAnalysis(id), eq(analyses.status, "preview_ready")))
           .returning({ id: analyses.id });
         return !!row;
       },
@@ -216,6 +229,27 @@ export function scoped(userId: string, db: Db = defaultDb()) {
         if (current && (current.status === "pending" || current.status === "approved")) return current;
         const [row] = await db.insert(payments).values({ userId, analysisId, kind, amountCents }).returning();
         return row;
+      },
+      /** Pago sin análisis todavía ("pagar antes de subir"): pendiente o aprobado, el más reciente. */
+      async latestPrepaid(kind: PaymentKind) {
+        const [row] = await db
+          .select()
+          .from(payments)
+          .where(and(eq(payments.userId, userId), eq(payments.kind, kind), isNull(payments.analysisId), inArray(payments.status, ["pending", "approved"])))
+          .orderBy(desc(payments.createdAt))
+          .limit(1);
+        return row ?? null;
+      },
+      /** Crea el pago antes de tener un análisis, salvo que ya haya uno pendiente o aprobado sin usar. */
+      async startPrepaid(kind: PaymentKind, amountCents: number) {
+        const current = await this.latestPrepaid(kind);
+        if (current) return current;
+        const [row] = await db.insert(payments).values({ userId, kind, amountCents }).returning();
+        return row;
+      },
+      /** Une el pago prepago con el análisis recién creado (lo consume). */
+      async linkPrepaid(paymentId: string, analysisId: string) {
+        await db.update(payments).set({ analysisId }).where(and(eq(payments.id, paymentId), eq(payments.userId, userId), isNull(payments.analysisId)));
       },
     },
     rechecks: {
