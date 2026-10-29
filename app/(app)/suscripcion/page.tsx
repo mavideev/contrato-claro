@@ -152,7 +152,7 @@ function PlanCard({ plan }: { plan: typeof plansTable.$inferSelect }) {
         <p className="text-lg font-bold">{plan.name}</p>
         {plan.description && <p className="text-[13.5px] text-ink-3">{plan.description}</p>}
       </div>
-      <p className="relative font-display text-[34px] leading-none font-semibold">
+      <p className="relative isolate font-display text-[34px] leading-none font-semibold">
         {plan.featured && (
           <span
             aria-hidden
