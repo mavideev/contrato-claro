@@ -69,7 +69,7 @@ async function createReadyAnalysis(userId: string, opts: { signingDate?: string;
 async function ensureDefaultPlan() {
   const [existing] = await db.select({ id: s.plans.id }).from(s.plans).where(eq(s.plans.code, "basic"));
   if (existing) return;
-  await db.insert(s.plans).values({ code: "basic", name: "Plan Básico", priceCents: 0, pageQuota: 50 });
+  await db.insert(s.plans).values({ code: "basic", name: "Plan Básico", description: "Para quien alquila su casa", priceCents: 0, pageQuota: 50 });
   console.log('[seed] plan "basic" creado (50 páginas/mes; precio sin definir, PRICE_* en .env)');
 }
 

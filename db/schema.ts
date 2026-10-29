@@ -382,8 +382,12 @@ export const plans = pgTable("plans", {
   id: id(),
   code: text().notNull().unique(),
   name: text().notNull(),
+  /** Bajada corta para la tarjeta del plan, ej. "Para quien alquila su casa". */
+  description: text(),
   priceCents: bigint({ mode: "number" }).notNull(),
   pageQuota: integer().notNull(),
+  /** Marca el plan recomendado en /suscripcion. Se activa a mano por SQL. */
+  featured: boolean().notNull().default(false),
   active: boolean().notNull().default(true),
   ...timestamps,
 });
