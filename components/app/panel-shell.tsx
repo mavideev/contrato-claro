@@ -4,10 +4,16 @@ import type { ReactNode } from "react";
 // Navegación del panel (prototipo 7 · Mis análisis / móvil 8): barra lateral
 // en desktop y pestañas abajo en mobile.
 
-type Section = "analisis" | "pagos" | "cuenta";
+type Section = "analisis" | "suscripcion" | "pagos" | "cuenta";
 
 const icons: Record<Section, ReactNode> = {
   analisis: <path d="M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h4" />,
+  suscripcion: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 9h18M8 14h8" />
+    </>
+  ),
   pagos: (
     <>
       <rect x="3" y="6" width="18" height="13" rx="2" />
@@ -24,6 +30,7 @@ const icons: Record<Section, ReactNode> = {
 
 const items: { key: Section; href: string; label: string; short: string }[] = [
   { key: "analisis", href: "/analisis", label: "Mis análisis", short: "Análisis" },
+  { key: "suscripcion", href: "/suscripcion", label: "Mi suscripción", short: "Suscripción" },
   { key: "pagos", href: "/pagos", label: "Pagos", short: "Pagos" },
   { key: "cuenta", href: "/cuenta", label: "Cuenta", short: "Cuenta" },
 ];

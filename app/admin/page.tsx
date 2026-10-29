@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { desc, eq, sql } from "drizzle-orm";
-import { aiUsage, analyses, user } from "@/db/schema";
+import { aiUsage, analyses, documents, user } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/session";
 import { costUsd } from "@/lib/ai/pricing";
 import { db } from "@/lib/db";
@@ -46,6 +46,15 @@ async function usageRows(): Promise<UsageRow[]> {
     .orderBy(desc(analyses.createdAt));
 }
 
+/** Páginas del documento original de cada análisis, para cruzar con el costo (spec 06). */
+async function pageCounts(): Promise<Map<string, { pageCount: number; photo: boolean }>> {
+  const rows = await db()
+    .select({ analysisId: documents.analysisId, pageCount: documents.pageCount, kind: documents.kind })
+    .from(documents)
+    .where(eq(documents.role, "original"));
+  return new Map(rows.filter((r) => r.pageCount).map((r) => [r.analysisId, { pageCount: r.pageCount!, photo: r.kind === "photo" }]));
+}
+
 export default function Page() {
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 p-6 md:p-10">
@@ -59,7 +68,7 @@ export default function Page() {
 
 async function Report() {
   await requireAdmin();
-  const rows = await usageRows();
+  const [rows, pages] = await Promise.all([usageRows(), pageCounts()]);
 
   const byAnalysis = new Map<string, { status: string; createdAt: Date; email: string; calls: UsageRow[] }>();
   for (const row of rows) {
@@ -80,6 +89,27 @@ async function Report() {
   const byKind = { read_pages: 0, extract_fields: 0, analyze_risks: 0 };
   for (const row of rows) byKind[row.kind] += costUsd(row.model, row.inputTokens, row.outputTokens) ?? 0;
 
+  // Costo por página (spec 06): separa lo que escala con páginas (read_pages) del costo
+  // fijo por análisis (extract_fields + analyze_risks), por tipo de documento, porque una
+  // foto gasta más tokens por página que un PDF/Word. Con poca muestra, el cupo de cada
+  // plan se calcula con el peor costo observado, no el promedio (ver docs/specs/06-suscripciones.md).
+  const perPage = {
+    photo: { variableCost: 0, pages: 0, fixedCost: 0, analyses: 0 },
+    texto: { variableCost: 0, pages: 0, fixedCost: 0, analyses: 0 },
+  };
+  for (const a of analysesCost) {
+    const doc = pages.get(a.analysisId);
+    if (!doc) continue;
+    const bucket = perPage[doc.photo ? "photo" : "texto"];
+    bucket.pages += doc.pageCount;
+    bucket.analyses += 1;
+    for (const c of a.calls) {
+      const cost = costUsd(c.model, c.inputTokens, c.outputTokens) ?? 0;
+      if (c.kind === "read_pages") bucket.variableCost += cost;
+      else bucket.fixedCost += cost;
+    }
+  }
+
   if (rows.length === 0) return <p className="text-ink-2">Todavía no hay llamadas a Claude registradas.</p>;
 
   return (
@@ -90,6 +120,25 @@ async function Report() {
         <Stat label="Leer fotos/PDF" value={usd.format(byKind.read_pages)} />
         <Stat label="Datos clave" value={usd.format(byKind.extract_fields)} />
         <Stat label="Riesgos por cláusula" value={usd.format(byKind.analyze_risks)} />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <Kicker>Costo por página (spec 06, suscripciones)</Kicker>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {(["photo", "texto"] as const).map((k) => {
+            const b = perPage[k];
+            return (
+              <div key={k} className="flex flex-col gap-1 rounded-[14px] border border-line-soft bg-surface p-4">
+                <Kicker>{k === "photo" ? "Fotos" : "PDF / Word / texto"}</Kicker>
+                <p className="font-display text-xl font-semibold">{b.pages ? usd.format(b.variableCost / b.pages) : "—"} / página</p>
+                <p className="text-sm text-ink-3">
+                  + {b.analyses ? usd.format(b.fixedCost / b.analyses) : "—"} fijo por análisis · muestra: {b.analyses} análisis
+                </p>
+                {b.analyses > 0 && b.analyses < 20 && <p className="text-xs text-ink-3">Muestra chica: usar con margen de seguridad extra, no como promedio definitivo.</p>}
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       <div className="overflow-x-auto rounded-[14px] border border-line-soft">

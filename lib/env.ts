@@ -47,6 +47,11 @@ const schema = z.object({
   PRICE_ANALYSIS_ARS: z.coerce.number().int().nonnegative().default(0),
   PRICE_RECHECK_ARS: z.coerce.number().int().nonnegative().default(0),
 
+  // Páginas extra (spec 06): cuando se agota el cupo del mes, un pago único
+  // (Checkout Pro, no ligado a un análisis) suma esta cantidad de páginas al ciclo vigente.
+  PRICE_TOPUP_ARS: z.coerce.number().int().nonnegative().default(0),
+  TOPUP_PAGES: z.coerce.number().int().positive().default(20),
+
   // IA (spec 05). `mock`: simulador local en lugar de Claude. Por defecto,
   // Claude si hay ANTHROPIC_API_KEY y el simulador si no (nunca en producción).
   ANTHROPIC_API_KEY: optional,

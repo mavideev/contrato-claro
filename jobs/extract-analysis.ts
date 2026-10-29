@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { NonRetriableError } from "inngest";
-import { analyses, clauses as clausesTable, documents } from "@/db/schema";
+import { analyses, clauses as clausesTable, documents, subscriptionCycles } from "@/db/schema";
 import { aiProvider } from "@/lib/ai/provider";
 import { db } from "@/lib/db";
 import { splitClauses } from "@/lib/extraction/clauses";
@@ -57,12 +57,22 @@ export const extractAnalysis = inngest.createFunction(
           .update(analyses)
           .set({ status: "awaiting_confirmation", confirmedFields: fields, errorCode: null })
           .where(and(eq(analyses.id, analysisId), eq(analyses.status, "extracting")))
-          .returning({ id: analyses.id });
+          .returning({ id: analyses.id, billingMode: analyses.billingMode, subscriptionCycleId: analyses.subscriptionCycleId, pagesCharged: analyses.pagesCharged });
         // Otro intento ya terminó, o el usuario borró el análisis.
         if (!current) return;
         await tx.update(documents).set({ sha256: read.sha256, pageCount: read.pages.length }).where(eq(documents.id, read.documentId));
         await tx.delete(clausesTable).where(eq(clausesTable.analysisId, analysisId));
         await tx.insert(clausesTable).values(clauses.map((c) => ({ ...c, analysisId, sha256: sha256(c.text) })));
+
+        // Suscripción (spec 06): se descuenta recién acá, con la cantidad real de
+        // páginas, y solo una vez (pagesCharged hace de candado ante reintentos).
+        if (current.billingMode === "subscription" && current.subscriptionCycleId && current.pagesCharged == null) {
+          await tx.update(analyses).set({ pagesCharged: read.pages.length }).where(eq(analyses.id, analysisId));
+          await tx
+            .update(subscriptionCycles)
+            .set({ pagesUsed: sql`${subscriptionCycles.pagesUsed} + ${read.pages.length}` })
+            .where(eq(subscriptionCycles.id, current.subscriptionCycleId));
+        }
       });
     });
     console.log("[análisis] extracción completa", { analysisId, clauses: clauses.length, ai: aiProvider().name });

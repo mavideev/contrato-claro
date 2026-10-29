@@ -5,6 +5,7 @@ import { z } from "zod";
 import { FIELDS } from "@/lib/analysis/fields";
 import { samplePreview } from "@/lib/analysis/sample-report";
 import { requireUser, type CurrentUser } from "@/lib/auth/session";
+import { ensureQuota } from "@/lib/billing/entitlement";
 import { scoped } from "@/lib/db/scoped";
 import { env } from "@/lib/env";
 import { inngest } from "@/lib/inngest/client";
@@ -102,6 +103,12 @@ export async function startAnalysis(_: FormState, form: FormData): Promise<FormS
     upload = { kind: "text", mime: "text/plain", sizeBytes: body.byteLength, storageKey: key };
   }
 
+  const quota = await ensureQuota(user.id);
+  if (!quota.ok && quota.reason === "sin_cupo") {
+    return { error: "Llegaste al tope de páginas de este mes. Podés esperar al próximo ciclo o comprar páginas extra desde Mi suscripción." };
+  }
+  if (quota.ok) upload.subscriptionCycleId = quota.subscriptionCycleId;
+
   const db = scoped(user.id);
   const analysis = await db.analyses.createFromUpload(upload);
   try {
@@ -151,6 +158,16 @@ export async function confirmAnalysis(id: string, _: FormState, form: FormData):
 
 export async function startPayment(id: string): Promise<void> {
   const user = await requireUser(`/analisis/${id}/estado`);
+  const db = scoped(user.id);
+  const analysis = await db.analyses.get(id);
+  if (!analysis) redirect("/analisis");
+  // Suscripción (spec 06): el cupo ya se reservó al subir, no hay pago puntual.
+  if (analysis.billingMode === "subscription") {
+    if (await db.analyses.markPaidBySubscription(id)) {
+      await inngest.send({ id: `analysis-paid-${id}`, name: "analysis/paid", data: { analysisId: id } });
+    }
+    redirect(`/pago/retorno?analisis=${id}`);
+  }
   await checkout(user, id, "analysis");
 }
 
@@ -216,7 +233,9 @@ export async function uploadRecheck(id: string, _: FormState, form: FormData): P
   }
 
   const db = scoped(user.id);
-  const recheck = await db.rechecks.upload(id, upload);
+  const entitlement = await db.rechecks.entitlement(id);
+  if (!entitlement.ok) return { error: "Este re-chequeo no está pagado, o el análisis ya no se puede re-chequear." };
+  const recheck = await db.rechecks.upload(id, upload, { subscriptionCycleId: entitlement.subscriptionCycleId });
   if (!recheck) return { error: "Este re-chequeo no está pagado, o el análisis ya no se puede re-chequear." };
   try {
     await inngest.send({ name: "recheck/uploaded", data: { recheckId: recheck.id, analysisId: id, userId: user.id } });

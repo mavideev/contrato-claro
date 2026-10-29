@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { verifySignature } from "./mercadopago";
 import { processPaymentNotification } from "./process";
+import { processAuthorizedPayment, processPreapprovalNotification } from "./process-subscription";
 
 // Webhook de Mercado Pago (spec 04, paso 4). Lo usan la ruta
 // /api/webhooks/mercadopago y el simulador local, con el mismo aviso firmado.
@@ -55,7 +56,13 @@ export async function handleWebhook(request: Request): Promise<Response> {
   const paymentId = url.searchParams.get("data.id") ?? (body.data?.id !== undefined ? String(body.data.id) : null);
   try {
     const result =
-      type === "payment" && paymentId ? await processPaymentNotification(paymentId) : { outcome: "ignored" as const, reason: `tipo ${type}` };
+      type === "payment" && paymentId
+        ? await processPaymentNotification(paymentId)
+        : type === "subscription_preapproval" && paymentId
+          ? await processPreapprovalNotification(paymentId)
+          : type === "subscription_authorized_payment" && paymentId
+            ? await processAuthorizedPayment(paymentId)
+            : { outcome: "ignored" as const, reason: `tipo ${type}` };
     await db().update(paymentEvents).set({ processedAt: new Date(), error: null }).where(eq(paymentEvents.id, event.id));
     return Response.json({ status: "procesado", result });
   } catch (err) {

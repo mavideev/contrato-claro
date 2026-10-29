@@ -3,10 +3,10 @@
 import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { analyses, paymentEvents, payments, user } from "@/db/schema";
+import { analyses, paymentEvents, payments, plans, subscriptionCycles, subscriptions, user } from "@/db/schema";
 import { db, sql } from "@/lib/db";
 import { sign, signatureManifest } from "@/lib/payments/mercadopago";
-import { mockPaymentId } from "@/lib/payments/mock";
+import { mockPaymentId, mockPreapprovalId } from "@/lib/payments/mock";
 import { processPaymentNotification } from "@/lib/payments/process";
 import type { PaymentProvider } from "@/lib/payments/types";
 import { POST } from "./route";
@@ -16,18 +16,22 @@ vi.mock("@/lib/inngest/client", () => ({ inngest: { send: async (e: unknown) => 
 
 const events: string[] = [];
 const analysisIds: string[] = [];
+const subscriptionIds: string[] = [];
 let userId: string;
+let otroId: string;
+let planId: string;
 
-function webhook(dataId: string, opts: { signature?: string; eventId?: string } = {}) {
+function webhook(dataId: string, opts: { signature?: string; eventId?: string; type?: string } = {}) {
   const eventId = opts.eventId ?? `test-${randomUUID()}`;
+  const type = opts.type ?? "payment";
   events.push(eventId);
   const ts = "1700000000";
   const signature = opts.signature ?? `ts=${ts},v1=${sign("secreto-de-prueba", signatureManifest(dataId, "req-1", ts))}`;
   return POST(
-    new Request(`http://localhost/api/webhooks/mercadopago?data.id=${dataId}&type=payment`, {
+    new Request(`http://localhost/api/webhooks/mercadopago?data.id=${dataId}&type=${type}`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-signature": signature, "x-request-id": "req-1" },
-      body: JSON.stringify({ id: eventId, type: "payment", data: { id: dataId } }),
+      body: JSON.stringify({ id: eventId, type, data: { id: dataId } }),
     }),
   );
 }
@@ -44,11 +48,16 @@ const status = async (table: typeof analyses | typeof payments, id: string) =>
 
 beforeAll(async () => {
   [{ id: userId }] = await db().select({ id: user.id }).from(user).where(eq(user.email, "demo@contratoclaro.local"));
+  [{ id: otroId }] = await db().select({ id: user.id }).from(user).where(eq(user.email, "otro@contratoclaro.local"));
+  const [plan] = await db().insert(plans).values({ code: `test-${randomUUID()}`, name: "Plan de prueba", priceCents: 500_000, pageQuota: 10 }).returning();
+  planId = plan.id;
 });
 
 afterAll(async () => {
   if (events.length) await db().delete(paymentEvents).where(inArray(paymentEvents.providerEventId, events));
   if (analysisIds.length) await db().delete(analyses).where(inArray(analyses.id, analysisIds));
+  if (subscriptionIds.length) await db().delete(subscriptions).where(inArray(subscriptions.id, subscriptionIds));
+  await db().delete(plans).where(eq(plans.id, planId));
   await sql().end();
 });
 
@@ -116,5 +125,25 @@ describe("processPaymentNotification()", () => {
   it("ignora pagos que no son de esta app", async () => {
     const res = await processPaymentNotification("mp-2", { provider: fake(100, "otra-cosa"), send: async () => {} });
     expect(res).toEqual({ outcome: "ignored", reason: "sin external_reference de esta app" });
+  });
+});
+
+describe("POST /api/webhooks/mercadopago (suscripciones, spec 06)", () => {
+  it("un aviso de preapproval autorizada abre el ciclo de la suscripción", async () => {
+    const [sub] = await db().insert(subscriptions).values({ userId: otroId, planId }).returning();
+    subscriptionIds.push(sub.id);
+
+    const res = await webhook(mockPreapprovalId("authorized", sub.id), { type: "subscription_preapproval" });
+    expect(res.status).toBe(200);
+
+    const [updated] = await db().select().from(subscriptions).where(eq(subscriptions.id, sub.id));
+    expect(updated.status).toBe("authorized");
+    expect(await db().select().from(subscriptionCycles).where(eq(subscriptionCycles.subscriptionId, sub.id))).toHaveLength(1);
+  });
+
+  it("un tipo de evento desconocido se ignora sin romper", async () => {
+    const res = await webhook("lo-que-sea", { type: "merchant_order" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "procesado", result: { outcome: "ignored", reason: "tipo merchant_order" } });
   });
 });

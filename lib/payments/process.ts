@@ -1,6 +1,6 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
-import { analyses, payments } from "@/db/schema";
+import { and, eq, sql } from "drizzle-orm";
+import { analyses, payments, subscriptionCycles } from "@/db/schema";
 import { db as defaultDb, type Db } from "@/lib/db";
 import { inngest } from "@/lib/inngest/client";
 import { paymentProvider } from "./provider";
@@ -42,13 +42,20 @@ export async function processPaymentNotification(providerPaymentId: string, deps
     await tx.update(payments).set({ status, mpPaymentId: remote.id }).where(eq(payments.id, row.id));
 
     let analysisPaid = false;
-    if (status === "approved" && row.kind === "analysis") {
+    if (status === "approved" && row.kind === "analysis" && row.analysisId) {
       await tx
         .update(analyses)
         .set({ status: "paid" })
         .where(and(eq(analyses.id, row.analysisId), eq(analyses.status, "preview_ready")));
       const [a] = await tx.select({ status: analyses.status }).from(analyses).where(eq(analyses.id, row.analysisId));
       analysisPaid = a?.status === "paid";
+    }
+    // Páginas extra (spec 06): se suman al ciclo una sola vez, en la transición a "approved".
+    if (status === "approved" && row.status !== "approved" && row.kind === "topup" && row.subscriptionCycleId && row.pagesGranted) {
+      await tx
+        .update(subscriptionCycles)
+        .set({ extraPagesGranted: sql`${subscriptionCycles.extraPagesGranted} + ${row.pagesGranted}` })
+        .where(eq(subscriptionCycles.id, row.subscriptionCycleId));
     }
     return { row, status, analysisPaid };
   });
@@ -57,7 +64,7 @@ export async function processPaymentNotification(providerPaymentId: string, deps
 
   // Fuera de la transacción. El id del evento evita duplicados en Inngest, y
   // como se manda mientras el análisis siga en `paid`, un reintento lo vuelve a encolar.
-  if (result.analysisPaid) {
+  if (result.analysisPaid && result.row.analysisId) {
     await send({ id: `analysis-paid-${result.row.analysisId}`, name: "analysis/paid", data: { analysisId: result.row.analysisId } });
   }
   return { outcome: "updated", paymentId: result.row.id, status: result.status, analysisPaid: result.analysisPaid };

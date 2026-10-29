@@ -6,11 +6,12 @@ Leyenda: ✅ hecho y probado · 🟡 hecho en parte · ⏳ pendiente
 
 **Para probar a mano:** [guia-de-prueba.md](guia-de-prueba.md), paso a paso.
 
-## Cómo retomar (última actualización: 27/10/2026)
+## Cómo retomar (última actualización: 28/10/2026)
 
 ### Dónde quedamos
 
-- **Etapa 4 terminada (sin probar todavía en producción): re-chequeo real.** Se escribió `runRecheck` (job de Inngest, evento `recheck/uploaded`): lee la versión final subida (mismo pipeline con IA que la etapa 2), compara primero por huella SHA del archivo completo y, si no coincide, hace diff cláusula por cláusula ignorando espacios/comillas/guiones. Antes la subida no hacía nada real (las fotos del escaneo se descartaban, el botón de archivo único no mandaba el archivo) — ahora sí suben de verdad y disparan la comparación. También se agregó auto-refresh en `/rechequeo` mientras el resultado está pendiente (antes se quedaba trabada hasta recargar a mano). **Falta: que la usuaria lo pruebe en producción** (no se probó en local por indicación de ella de no gastar tokens en pruebas locales). Typecheck y lint en verde; cambio todavía sin commitear (la usuaria comitea y pushea ella misma).
+- **Suscripción mensual con cupo de páginas (spec nueva, [06-suscripciones.md](specs/06-suscripciones.md)): primera versión escrita, sin probar en producción.** Reemplaza (para quien se suscribe) el pago por análisis: cobro recurrente mensual con la Preapproval API de Mercado Pago (antes solo se usaba Checkout Pro, pago único), un cupo de páginas por mes que se descuenta recién al terminar de leer el contrato (no al subirlo), el re-chequeo incluido en el mismo cupo, y la posibilidad de comprar páginas extra (pago único, de siempre) si se agota antes de fin de mes. Quien no se suscribe sigue exactamente igual que antes (pago por análisis). Pantallas nuevas: `/suscripcion` (elegir plan, ver cupo usado, comprar extra, cancelar) y `/suscripcion/simulador` (equivalente a `/pago/simulador`, sin credenciales). Se agregó un plan "Plan Básico" de ejemplo al seed (50 páginas/mes, precio sin definir). Typecheck, lint y tests en verde (111 tests, se agregaron ~20 nuevos para suscripciones). **Falta: que la usuaria lo pruebe desplegado** (decisión suya: no probar en local). Importante antes de probar con Mercado Pago real: la integración con la Preapproval API nunca se probó contra el sandbox real de Mercado Pago (solo contra el simulador local) — puede haber detalles de la API real (nombres de campos, timing de la primera autorización) que no coincidan a la primera.
+- **Etapa 4 terminada (sin probar todavía en producción): re-chequeo real.** Se escribió `runRecheck` (job de Inngest, evento `recheck/uploaded`): lee la versión final subida (mismo pipeline con IA que la etapa 2), compara primero por huella SHA del archivo completo y, si no coincide, hace diff cláusula por cláusula ignorando espacios/comillas/guiones. Antes la subida no hacía nada real (las fotos del escaneo se descartaban, el botón de archivo único no mandaba el archivo) — ahora sí suben de verdad y disparan la comparación. También se agregó auto-refresh en `/rechequeo` mientras el resultado está pendiente (antes se quedaba trabada hasta recargar a mano). **Falta: que la usuaria lo pruebe en producción** (no se probó en local por indicación de ella de no gastar tokens en pruebas locales).
 - Se armó `docs/arquitectura.md`: diagrama general de componentes (app, base de datos, storage, jobs, IA, pagos, auth) y el flujo de punta a punta de un análisis pagado.
 - **Etapa 3 terminada: informe real con IA.** Checklist propio (`lib/analysis/checklists/rental-v1.ts`, basado en la ley vigente post DNU 70/2023 — ver [normativa-alquileres.md](normativa-alquileres.md)), hallazgos reales por cláusula con cita obligatoria, revisión del documento completo (anexos, domicilios, firmantes, jurisdicción), PDF descargable con marca de agua, y aviso legal visible en vista previa/informe/re-chequeo. Probado con un contrato real lleno de trampas deliberadas: detectó la gran mayoría (índice unilateral, punitorio abusivo, comisión indebida en CABA, inconsistencias de precio y plazo, etc.).
 - **Claude conectado y probado con fotos y PDF.** Modelo: `claude-haiku-5-5`. Costo real medible en `/admin`: centavos de dólar por análisis completo.
@@ -30,8 +31,9 @@ Todo está en `main` (etapas 0, 1 y 2) y se trabaja directo ahí, sin ramas apar
 
    | Variable | De dónde sale | ¿Hace falta? |
    |---|---|---|
-   | `MP_ACCESS_TOKEN` | Mercado Pago Developers → tu aplicación → Credenciales de prueba → Access Token | para pagar con Mercado Pago; sin ella, usa el simulador |
+   | `MP_ACCESS_TOKEN` | Mercado Pago Developers → tu aplicación → Credenciales de prueba → Access Token | para pagar con Mercado Pago (Checkout Pro y, desde la suscripción, también Preapproval); sin ella, usa el simulador |
    | `PRICE_ANALYSIS_ARS=1000` y `PRICE_RECHECK_ARS=500` | precios de prueba (Mercado Pago no acepta $0) | junto con el token |
+   | `PRICE_TOPUP_ARS` y `TOPUP_PAGES` | precio y cantidad de páginas extra (spec 06), cuando se agota el cupo del mes | opcional, sin definir no se puede comprar extra |
    | `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys | ⚠️ todavía no: hasta conectar Claude en `lib/ai/`, con esta línea la lectura falla. Sin ella usa el simulador de IA |
    | `DB_PORT=5433` | solo si el puerto 5432 está ocupado (en la Mac anterior había otro Postgres) | no, salvo ese caso |
 
@@ -41,12 +43,13 @@ Todo está en `main` (etapas 0, 1 y 2) y se trabaja directo ahí, sin ramas apar
 
 ### Próximos pasos, en orden
 
-1. **Probar etapa 4 en producción** (re-chequeo real): pagar el extra, subir la versión final (archivo y foto), confirmar que compara bien y que el "comparando" se actualiza solo. Si funciona: comitear, actualizar `CHANGELOG.md` y subir `package.json` a `0.4.0` (mensaje de commit ya preparado, quedó en el chat).
-2. Verificación completa de `deploy.md` (paso 9): mails de verificación/link mágico, `/analisis` sin sesión, IP detrás del proxy (punto 9.8, sigue pendiente).
-3. Limpiar encabezados/pies de página repetidos en la extracción de fotos/PDF (se cuelan en el texto de las cláusulas).
-4. Pendientes sueltos: borrar un análisis suelto, captcha, aviso de foto borrosa, regla de vencimiento para subidas abandonadas en S3 y la pregunta abierta 2.
-5. CI: el mismo test de Playwright flaky de siempre (no afecta producción).
-6. Etapa 5 (RAG con normativa versionada) y etapa 6 (cierre) — más adelante.
+1. **Probar etapa 4 en producción** (re-chequeo real): pagar el extra, subir la versión final (archivo y foto), confirmar que compara bien y que el "comparando" se actualiza solo. Si funciona: comitear, actualizar `CHANGELOG.md` y subir `package.json` a `0.4.0`.
+2. **Probar la suscripción desplegada**: cargar `MP_ACCESS_TOKEN` de prueba, suscribirse a un plan, autorizar el débito en el sandbox real de Mercado Pago (la Preapproval API nunca se probó fuera del simulador), confirmar que el cupo se descuenta al analizar y que el re-chequeo lo descuenta también. Definir el precio y el cupo reales del plan (hoy el seed trae un "Plan Básico" de 50 páginas sin precio) usando `/admin` → "Costo por página" como referencia.
+3. Verificación completa de `deploy.md` (paso 9): mails de verificación/link mágico, `/analisis` sin sesión, IP detrás del proxy (punto 9.8, sigue pendiente).
+4. Limpiar encabezados/pies de página repetidos en la extracción de fotos/PDF (se cuelan en el texto de las cláusulas).
+5. Pendientes sueltos: borrar un análisis suelto, captcha, aviso de foto borrosa, regla de vencimiento para subidas abandonadas en S3 y la pregunta abierta 2.
+6. CI: el mismo test de Playwright flaky de siempre (no afecta producción).
+7. Etapa 5 (RAG con normativa versionada) y etapa 6 (cierre) — más adelante.
 
 ## Etapas del proyecto
 

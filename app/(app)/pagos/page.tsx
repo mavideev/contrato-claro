@@ -52,11 +52,15 @@ async function Payments() {
       {rows.map(({ payment: p, analysis: a }) => (
         <li key={p.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[14px] border border-line-soft bg-surface p-4 md:px-6">
           <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-1">
-            <span className="font-bold">{p.kind === "analysis" ? "Análisis" : "Re-chequeo"}</span>
-            <Link href={`/analisis/${a.id}/estado`} className="truncate text-sm text-ink-3">
-              {CONTRACT_LABEL[a.contractType]}
-              {a.propertyLabel ? ` · ${a.propertyLabel}` : ""}
-            </Link>
+            <span className="font-bold">{p.kind === "analysis" ? "Análisis" : p.kind === "recheck" ? "Re-chequeo" : "Páginas extra"}</span>
+            {a ? (
+              <Link href={`/analisis/${a.id}/estado`} className="truncate text-sm text-ink-3">
+                {CONTRACT_LABEL[a.contractType]}
+                {a.propertyLabel ? ` · ${a.propertyLabel}` : ""}
+              </Link>
+            ) : (
+              <span className="truncate text-sm text-ink-3">Suscripción</span>
+            )}
           </div>
           <span className="text-sm text-ink-3">{formatDay(p.createdAt)}</span>
           <span className="font-semibold">{formatPrice(p.amountCents)}</span>

@@ -21,6 +21,6 @@ async function Scan({ searchParams }: Pick<PageProps<"/analisis/nuevo/escanear">
   const user = await requireUser("/analisis/nuevo/escanear");
   if (typeof rechequeo !== "string") return <ScanScreen mode="analysis" />;
 
-  if (!(await scoped(user.id).rechecks.paid(rechequeo))) notFound();
+  if (!(await scoped(user.id).rechecks.entitlement(rechequeo)).ok) notFound();
   return <ScanScreen mode="recheck" analysisId={rechequeo} />;
 }

@@ -1,6 +1,6 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { NonRetriableError } from "inngest";
-import { clauses as clausesTable, documents, fingerprints, rechecks, type RecheckChange } from "@/db/schema";
+import { clauses as clausesTable, documents, fingerprints, rechecks, subscriptionCycles, type RecheckChange } from "@/db/schema";
 import { db } from "@/lib/db";
 import { splitClauses } from "@/lib/extraction/clauses";
 import { ExtractionError } from "@/lib/extraction/read";
@@ -39,13 +39,25 @@ export const runRecheck = inngest.createFunction(
       } catch (err) {
         if (!(err instanceof ExtractionError)) throw err;
         console.error("[re-chequeo] no se pudo leer la versión final", { analysisId, recheckId, code: err.code });
-        return { result: "failed" as const, changes: [] as RecheckChange[] };
+        return { result: "failed" as const, changes: [] as RecheckChange[], pages: 0 };
+      }
+
+      // Suscripción (spec 06): se descuenta con la cantidad real de páginas,
+      // solo una vez (pagesCharged hace de candado ante reintentos).
+      if (recheck.subscriptionCycleId && recheck.pagesCharged == null) {
+        await db().transaction(async (tx) => {
+          await tx.update(rechecks).set({ pagesCharged: read.pages.length }).where(eq(rechecks.id, recheckId));
+          await tx
+            .update(subscriptionCycles)
+            .set({ pagesUsed: sql`${subscriptionCycles.pagesUsed} + ${read.pages.length}` })
+            .where(eq(subscriptionCycles.id, recheck.subscriptionCycleId!));
+        });
       }
 
       const [fingerprint] = await db().select().from(fingerprints).where(eq(fingerprints.analysisId, analysisId)).limit(1);
       if (fingerprint?.fileSha256 && fingerprint.fileSha256 === read.sha256) {
         console.log("[re-chequeo] archivo idéntico", { analysisId, recheckId });
-        return { result: "identical" as const, changes: [] as RecheckChange[] };
+        return { result: "identical" as const, changes: [] as RecheckChange[], pages: read.pages.length };
       }
 
       const originalClauses = await db().select().from(clausesTable).where(eq(clausesTable.analysisId, analysisId)).orderBy(asc(clausesTable.number));
@@ -68,7 +80,7 @@ export const runRecheck = inngest.createFunction(
       changes.sort((a, b) => a.clauseNumber - b.clauseNumber);
 
       console.log("[re-chequeo] comparación completa", { analysisId, recheckId, cambios: changes.length });
-      return { result: changes.length ? ("changed" as const) : ("identical" as const), changes };
+      return { result: changes.length ? ("changed" as const) : ("identical" as const), changes, pages: read.pages.length };
     });
 
     await db()

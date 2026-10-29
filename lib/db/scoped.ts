@@ -8,7 +8,10 @@ import {
   findings,
   fingerprints,
   payments,
+  plans,
   rechecks,
+  subscriptionCycles,
+  subscriptions,
   type ConfirmedFields,
   type PreviewCounts,
 } from "@/db/schema";
@@ -49,6 +52,25 @@ export function scoped(userId: string, db: Db = defaultDb()) {
     return row ?? null;
   }
 
+  /** Suscripción `authorized` del usuario y su ciclo vigente, o null (spec 06). */
+  async function activeCycle() {
+    const [sub] = await db
+      .select()
+      .from(subscriptions)
+      .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "authorized")))
+      .orderBy(desc(subscriptions.createdAt))
+      .limit(1);
+    if (!sub) return null;
+    const [cycle] = await db
+      .select()
+      .from(subscriptionCycles)
+      .where(eq(subscriptionCycles.subscriptionId, sub.id))
+      .orderBy(desc(subscriptionCycles.periodStart))
+      .limit(1);
+    if (!cycle || cycle.periodEnd < new Date()) return null;
+    return cycle;
+  }
+
   return {
     analyses: {
       list() {
@@ -77,9 +99,25 @@ export function scoped(userId: string, db: Db = defaultDb()) {
        * queda en `extracting` hasta que corre la extracción. Las fotos van como
        * un documento con una página por foto.
        */
-      async createFromUpload(upload: { kind: DocumentKind; mime: string; sizeBytes: number; storageKey: string; pages?: { storageKey: string; sizeBytes: number }[] }) {
+      async createFromUpload(upload: {
+        kind: DocumentKind;
+        mime: string;
+        sizeBytes: number;
+        storageKey: string;
+        pages?: { storageKey: string; sizeBytes: number }[];
+        subscriptionCycleId?: string;
+      }) {
         return db.transaction(async (tx) => {
-          const [analysis] = await tx.insert(analyses).values({ userId, contractType: "rental", status: "extracting" }).returning();
+          const [analysis] = await tx
+            .insert(analyses)
+            .values({
+              userId,
+              contractType: "rental",
+              status: "extracting",
+              billingMode: upload.subscriptionCycleId ? "subscription" : "one_time",
+              subscriptionCycleId: upload.subscriptionCycleId,
+            })
+            .returning();
           const [document] = await tx
             .insert(documents)
             .values({ analysisId: analysis.id, kind: upload.kind, mime: upload.mime, sizeBytes: upload.sizeBytes, storageKey: upload.storageKey, pageCount: upload.pages?.length })
@@ -120,6 +158,15 @@ export function scoped(userId: string, db: Db = defaultDb()) {
           .returning();
         return row ?? null;
       },
+      /** Suscripción con cupo (spec 06): pasa a "paid" sin pago puntual, listo para analizar. */
+      async markPaidBySubscription(id: string) {
+        const [row] = await db
+          .update(analyses)
+          .set({ status: "paid" })
+          .where(and(ownAnalysis(id), eq(analyses.status, "preview_ready"), eq(analyses.billingMode, "subscription")))
+          .returning({ id: analyses.id });
+        return !!row;
+      },
       /** Re-chequeo: análisis, huella, cantidad de cláusulas, último re-chequeo y pago del re-chequeo. */
       async recheck(id: string) {
         const analysis = await getAnalysis(id);
@@ -134,7 +181,7 @@ export function scoped(userId: string, db: Db = defaultDb()) {
       },
     },
     payments: {
-      /** Historial con el análisis al que corresponde cada pago. */
+      /** Historial con el análisis al que corresponde cada pago (null en las páginas extra, spec 06). */
       list() {
         return db
           .select({
@@ -142,7 +189,7 @@ export function scoped(userId: string, db: Db = defaultDb()) {
             analysis: { id: analyses.id, contractType: analyses.contractType, propertyLabel: analyses.propertyLabel },
           })
           .from(payments)
-          .innerJoin(analyses, eq(payments.analysisId, analyses.id))
+          .leftJoin(analyses, eq(payments.analysisId, analyses.id))
           .where(eq(payments.userId, userId))
           .orderBy(desc(payments.createdAt));
       },
@@ -179,9 +226,19 @@ export function scoped(userId: string, db: Db = defaultDb()) {
       async upload(
         analysisId: string,
         upload: { kind: DocumentKind; mime: string; sizeBytes: number; storageKey: string; pages?: { storageKey: string; sizeBytes: number }[] },
+        opts: { subscriptionCycleId?: string } = {},
       ) {
-        const payment = await this.paid(analysisId);
-        if (!payment) return null;
+        let paymentId: string | null = null;
+        if (opts.subscriptionCycleId) {
+          const analysis = await getAnalysis(analysisId);
+          if (!analysis || analysis.status !== "ready") return null;
+          const [cycle] = await db.select().from(subscriptionCycles).where(eq(subscriptionCycles.id, opts.subscriptionCycleId)).limit(1);
+          if (!cycle || cycle.pageQuota + cycle.extraPagesGranted - cycle.pagesUsed <= 0) return null;
+        } else {
+          const payment = await this.paid(analysisId);
+          if (!payment) return null;
+          paymentId = payment.id;
+        }
         return db.transaction(async (tx) => {
           const [document] = await tx
             .insert(documents)
@@ -190,7 +247,10 @@ export function scoped(userId: string, db: Db = defaultDb()) {
           if (upload.pages?.length) {
             await tx.insert(documentPages).values(upload.pages.map((p, i) => ({ documentId: document.id, pageNumber: i + 1, storageKey: p.storageKey })));
           }
-          const [row] = await tx.insert(rechecks).values({ analysisId, paymentId: payment.id, documentId: document.id }).returning();
+          const [row] = await tx
+            .insert(rechecks)
+            .values({ analysisId, paymentId, documentId: document.id, subscriptionCycleId: opts.subscriptionCycleId })
+            .returning();
           return row;
         });
       },
@@ -199,6 +259,47 @@ export function scoped(userId: string, db: Db = defaultDb()) {
         if (!analysis || analysis.status !== "ready") return null;
         const payment = await latestPayment(analysisId, "recheck");
         return payment?.status === "approved" ? payment : null;
+      },
+      /** Si puede re-chequear: pago aprobado, o cupo de suscripción vigente (spec 06). */
+      async entitlement(analysisId: string): Promise<{ ok: true; subscriptionCycleId?: string } | { ok: false; reason: "no_listo" | "sin_suscripcion" | "sin_cupo" }> {
+        const analysis = await getAnalysis(analysisId);
+        if (!analysis || analysis.status !== "ready") return { ok: false, reason: "no_listo" };
+        if (await this.paid(analysisId)) return { ok: true };
+        const cycle = await activeCycle();
+        if (!cycle) return { ok: false, reason: "sin_suscripcion" };
+        if (cycle.pageQuota + cycle.extraPagesGranted - cycle.pagesUsed <= 0) return { ok: false, reason: "sin_cupo" };
+        return { ok: true, subscriptionCycleId: cycle.id };
+      },
+    },
+    billing: {
+      activeCycle,
+      /** Suscripción activa o pendiente del usuario, si tiene una. */
+      async current() {
+        const [row] = await db
+          .select()
+          .from(subscriptions)
+          .where(and(eq(subscriptions.userId, userId), inArray(subscriptions.status, ["pending", "authorized", "paused"])))
+          .orderBy(desc(subscriptions.createdAt))
+          .limit(1);
+        return row ?? null;
+      },
+      /** Alta de suscripción (spec 06): no duplica si ya hay una pendiente o activa. */
+      async start(planId: string) {
+        const current = await this.current();
+        if (current) return current;
+        const [row] = await db.insert(subscriptions).values({ userId, planId }).returning();
+        return row;
+      },
+      async setPreapproval(subscriptionId: string, mpPreapprovalId: string) {
+        await db.update(subscriptions).set({ mpPreapprovalId }).where(and(eq(subscriptions.id, subscriptionId), eq(subscriptions.userId, userId)));
+      },
+      async cancel(subscriptionId: string) {
+        await db.update(subscriptions).set({ cancelAtPeriodEnd: true }).where(and(eq(subscriptions.id, subscriptionId), eq(subscriptions.userId, userId)));
+      },
+      /** Páginas extra compradas dentro del ciclo vigente (spec 06, top-up). */
+      async startTopup(subscriptionCycleId: string, amountCents: number, pagesGranted: number) {
+        const [row] = await db.insert(payments).values({ userId, kind: "topup", amountCents, subscriptionCycleId, pagesGranted }).returning();
+        return row;
       },
     },
     account: {
@@ -219,4 +320,14 @@ export function scoped(userId: string, db: Db = defaultDb()) {
       },
     },
   };
+}
+
+/** Catálogo de planes activos (spec 06), no depende de un usuario. */
+export function listActivePlans(db: Db = defaultDb()) {
+  return db.select().from(plans).where(eq(plans.active, true)).orderBy(asc(plans.priceCents));
+}
+
+export async function getPlan(id: string, db: Db = defaultDb()) {
+  const [row] = await db.select().from(plans).where(eq(plans.id, id)).limit(1);
+  return row ?? null;
 }

@@ -25,3 +25,31 @@ export interface PaymentProvider {
   createCheckout(input: CheckoutInput): Promise<{ redirectUrl: string; preferenceId: string | null }>;
   getPayment(id: string): Promise<ProviderPayment>;
 }
+
+// Suscripciones (spec 06): Preapproval API de Mercado Pago, cobro recurrente mensual.
+
+export type SubscriptionStatus = "pending" | "authorized" | "paused" | "cancelled";
+
+export type CreatePreapprovalInput = {
+  /** subscriptions.id: viaja como external_reference y vuelve en el webhook. */
+  subscriptionId: string;
+  planName: string;
+  amountCents: number;
+  payerEmail: string;
+  returnUrl: string;
+};
+
+export type ProviderPreapproval = {
+  id: string;
+  status: SubscriptionStatus;
+  externalReference: string | null;
+};
+
+export interface SubscriptionProvider {
+  name: "mock" | "mercadopago";
+  createPreapproval(input: CreatePreapprovalInput): Promise<{ redirectUrl: string; preapprovalId: string }>;
+  getPreapproval(id: string): Promise<ProviderPreapproval>;
+  cancelPreapproval(id: string): Promise<void>;
+  /** El webhook `subscription_authorized_payment` trae el id de un cobro: de ahí sale a qué preapproval pertenece. */
+  getAuthorizedPayment(id: string): Promise<{ preapprovalId: string }>;
+}

@@ -34,7 +34,8 @@ const hash = (h: string) => `${h.slice(0, 4)}…${h.slice(-2)}`;
 async function Recheck({ params }: Pick<PageProps<"/analisis/[id]/rechequeo">, "params">) {
   const { id } = await params;
   const user = await requireUser(`/analisis/${id}/rechequeo`);
-  const data = await scoped(user.id).analyses.recheck(id);
+  const db = scoped(user.id);
+  const [data, entitlement] = await Promise.all([db.analyses.recheck(id), db.rechecks.entitlement(id)]);
   if (!data) notFound();
   const { analysis, fingerprint, clauseCount, latest, payment } = data;
   if (analysis.status !== "ready") redirect(`/analisis/${id}/estado`);
@@ -57,8 +58,22 @@ async function Recheck({ params }: Pick<PageProps<"/analisis/[id]/rechequeo">, "
     </div>
   );
 
-  // 1. Comprar el re-chequeo.
-  if (payment?.status !== "approved") {
+  // 1. Habilitar el re-chequeo: con cupo de la suscripción no hace falta pagar aparte.
+  if (!entitlement.ok && entitlement.reason === "sin_cupo") {
+    return (
+      <>
+        {header(`El día de la firma, subí la versión final y la comparamos cláusula por cláusula con la que analizamos el ${analyzed}.`)}
+        <section className="flex max-w-[560px] flex-col gap-4 rounded-2xl border border-line-soft bg-surface px-5 py-6 md:p-8">
+          <Kicker>Re-chequeo</Kicker>
+          <p className="text-[15px] leading-normal text-ink-2 md:text-base">
+            Llegaste al tope de páginas de este mes. Podés esperar al próximo ciclo o comprar páginas extra.
+          </p>
+          <ButtonLink href="/suscripcion">Comprar páginas extra</ButtonLink>
+        </section>
+      </>
+    );
+  }
+  if (!entitlement.ok) {
     const pending = payment?.status === "pending";
     return (
       <>

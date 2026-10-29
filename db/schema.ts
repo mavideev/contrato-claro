@@ -114,7 +114,9 @@ export const documentRole = pgEnum("document_role", ["original", "recheck"]);
 export const documentKind = pgEnum("document_kind", ["photo", "pdf", "docx", "text"]);
 export const findingLevel = pgEnum("finding_level", ["high", "attention", "none"]);
 export const recheckResult = pgEnum("recheck_result", ["pending", "identical", "changed", "failed"]);
-export const paymentKind = pgEnum("payment_kind", ["analysis", "recheck"]);
+export const paymentKind = pgEnum("payment_kind", ["analysis", "recheck", "topup"]);
+export const billingMode = pgEnum("billing_mode", ["one_time", "subscription"]);
+export const subscriptionStatus = pgEnum("subscription_status", ["pending", "authorized", "paused", "cancelled"]);
 export const paymentStatus = pgEnum("payment_status", [
   "pending",
   "approved",
@@ -154,6 +156,9 @@ export const analyses = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     contractType: contractType().notNull().default("rental"),
     status: analysisStatus().notNull().default("draft"),
+    billingMode: billingMode().notNull().default("one_time"),
+    subscriptionCycleId: uuid().references(() => subscriptionCycles.id, { onDelete: "set null" }),
+    pagesCharged: integer(),
     signingDate: date({ mode: "string" }),
     propertyLabel: text(),
     checklistVersion: text(),
@@ -331,15 +336,15 @@ export const payments = pgTable(
     userId: text()
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    analysisId: uuid()
-      .notNull()
-      .references(() => analyses.id, { onDelete: "cascade" }),
+    analysisId: uuid().references(() => analyses.id, { onDelete: "cascade" }),
     kind: paymentKind().notNull(),
     status: paymentStatus().notNull().default("pending"),
     mpPreferenceId: text(),
     mpPaymentId: text().unique(),
     amountCents: bigint({ mode: "number" }).notNull(),
     currency: text().notNull().default("ARS"),
+    subscriptionCycleId: uuid().references(() => subscriptionCycles.id, { onDelete: "set null" }),
+    pagesGranted: integer(),
     ...timestamps,
   },
   (t) => [index().on(t.userId), index().on(t.analysisId)],
@@ -364,9 +369,60 @@ export const rechecks = pgTable(
     result: recheckResult().notNull().default("pending"),
     changes: jsonb().$type<RecheckChange[]>(),
     certificateKey: text(),
+    subscriptionCycleId: uuid().references(() => subscriptionCycles.id, { onDelete: "set null" }),
+    pagesCharged: integer(),
     ...timestamps,
   },
   (t) => [index().on(t.analysisId)],
+);
+
+// ───────────────────────────── Suscripciones (spec 06) ─────────────────────────────
+
+export const plans = pgTable("plans", {
+  id: id(),
+  code: text().notNull().unique(),
+  name: text().notNull(),
+  priceCents: bigint({ mode: "number" }).notNull(),
+  pageQuota: integer().notNull(),
+  active: boolean().notNull().default(true),
+  ...timestamps,
+});
+
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: id(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    planId: uuid()
+      .notNull()
+      .references(() => plans.id, { onDelete: "restrict" }),
+    mpPreapprovalId: text().unique(),
+    status: subscriptionStatus().notNull().default("pending"),
+    currentPeriodStart: timestamp({ withTimezone: true }),
+    currentPeriodEnd: timestamp({ withTimezone: true }),
+    cancelAtPeriodEnd: boolean().notNull().default(false),
+    ...timestamps,
+  },
+  (t) => [index().on(t.userId)],
+);
+
+export const subscriptionCycles = pgTable(
+  "subscription_cycles",
+  {
+    id: id(),
+    subscriptionId: uuid()
+      .notNull()
+      .references(() => subscriptions.id, { onDelete: "cascade" }),
+    periodStart: timestamp({ withTimezone: true }).notNull(),
+    periodEnd: timestamp({ withTimezone: true }).notNull(),
+    pageQuota: integer().notNull(),
+    pagesUsed: integer().notNull().default(0),
+    extraPagesGranted: integer().notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [unique().on(t.subscriptionId, t.periodStart)],
 );
 
 export const paymentEvents = pgTable("payment_events", {

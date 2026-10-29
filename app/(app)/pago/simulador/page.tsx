@@ -41,7 +41,7 @@ async function Simulator({ searchParams }: Pick<PageProps<"/pago/simulador">, "s
       <Kicker>Simulador de Mercado Pago · solo desarrollo</Kicker>
       <Title>¿Cómo sale el pago?</Title>
       <p className="text-ink-2">
-        {payment.kind === "analysis" ? "Análisis de contrato de alquiler" : "Re-chequeo del día de la firma"} ·{" "}
+        {payment.kind === "analysis" ? "Análisis de contrato de alquiler" : payment.kind === "recheck" ? "Re-chequeo del día de la firma" : "Páginas extra"} ·{" "}
         <strong>{formatPrice(payment.amountCents)}</strong>
       </p>
       <p className="text-sm text-ink-3">
