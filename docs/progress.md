@@ -51,7 +51,7 @@ Todo está en `main` (etapas 0, 1 y 2) y se trabaja directo ahí, sin ramas apar
 5. Limpiar encabezados/pies de página repetidos en la extracción de fotos/PDF (se cuelan en el texto de las cláusulas).
 6. Pendientes sueltos: borrar un análisis suelto, captcha, aviso de foto borrosa, regla de vencimiento para subidas abandonadas en S3 y la pregunta abierta 2.
 7. CI: el mismo test de Playwright flaky de siempre (no afecta producción).
-8. Etapa 5 (RAG con normativa versionada) y etapa 6 (cierre) — más adelante.
+8. Etapa 6 (cierre: revisión humana, prueba de calidad de fotos, decisión sobre la app) — más adelante. **Etapa 5 (RAG), decisión de la usuaria (30/10/2026): se deja para el futuro, cuando realmente se necesite** — el checklist fijo actual ya cita normativa real y anda bien; RAG sumaría costo de IA y otro proveedor (embeddings) a cambio de algo que hoy no hace falta.
 
 ## Etapas del proyecto
 
