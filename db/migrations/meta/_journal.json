@@ -43,6 +43,13 @@
       "when": 1793314120545,
       "tag": "0005_spotty_mister_fear",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793580887459,
+      "tag": "0006_seed_plans",
+      "breakpoints": true
     }
   ]
 }

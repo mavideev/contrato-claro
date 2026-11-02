@@ -65,17 +65,10 @@ async function createReadyAnalysis(userId: string, opts: { signingDate?: string;
   return a;
 }
 
-/** Plan de suscripción por defecto (spec 06), independiente del resto del seed. */
-async function ensureDefaultPlan() {
-  const [existing] = await db.select({ id: s.plans.id }).from(s.plans).where(eq(s.plans.code, "basic"));
-  if (existing) return;
-  await db.insert(s.plans).values({ code: "basic", name: "Plan Básico", description: "Para quien alquila su casa", priceCents: 0, pageQuota: 50 });
-  console.log('[seed] plan "basic" creado (50 páginas/mes; precio sin definir, PRICE_* en .env)');
-}
-
 async function main() {
-  await ensureDefaultPlan();
-
+  // Los planes de suscripción (spec 06) salen de la migración
+  // db/migrations/0006_seed_plans.sql, no de este seed: así son los mismos en
+  // desarrollo, CI y producción.
   const existing = await db.select({ id: s.user.id }).from(s.user).where(eq(s.user.email, DEMO.email));
   if (existing.length) {
     console.log("[seed] ya hay datos de ejemplo; nada que hacer (usá `make reset` para empezar de cero)");
