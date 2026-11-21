@@ -27,7 +27,7 @@ Todo está en `main` (etapas 0, 1 y 2) y se trabaja directo ahí, sin ramas apar
 ### Para seguir en otra máquina
 
 1. Instalar **Docker Desktop** y **Node 22** (`.nvmrc`) con **pnpm** (`corepack enable`).
-2. `git clone https://github.com/mavideev/contrato-claro.git` y `cd contrato-claro` (queda en `main`).
+2. `git clone https://github.com/mavideev/contrato-claro.git` y `cd contrato-claro` (queda en `main`). **Ojo:** ese es el remoto `origin`; Render despliega desde el remoto `devia` (`DevIA-Solutions/-contrato-claro`) — agregarlo (`git remote add devia https://github.com/DevIA-Solutions/-contrato-claro.git`) y acordarse de pushear ahí para que se vea en producción.
 3. `pnpm install` (para los tests y el editor; la app corre en Docker).
 4. Crear el archivo `.env` en la raíz. **No está en el repositorio** (tiene claves): hay que volver a cargarlas desde cada panel.
 

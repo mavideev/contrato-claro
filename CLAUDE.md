@@ -13,6 +13,7 @@ Analizador de contratos de alquiler (Argentina). Next.js + Postgres + S3 + Innge
 ## Cómo trabajar
 
 - Todo se trabaja directo en `main`, sin ramas aparte (lo pidió la usuaria). Commit + push por partes.
+- Hay dos remotos (`git remote -v`): `origin` (`mavideev/contrato-claro`) y `devia` (`DevIA-Solutions/-contrato-claro`). **Render despliega desde `devia`** — hacer `git push devia main` (además de `origin` si hace falta mantenerlo igual), si no el deploy no se entera de nada nuevo.
 - Al cerrar una parte, actualizar `docs/progress.md` y, si cambia algo que se prueba a mano, `docs/guia-de-prueba.md`. Lo que afecte a producción va en `docs/deploy.md`.
 - Las specs están en `docs/specs/`; el plan general, en `documento-base-mvp-v0.2.md`.
 - Tests: `pnpm test` (vitest, necesita el entorno levantado) y `pnpm e2e` (Playwright). Antes de dar algo por terminado: `pnpm lint`, `pnpm typecheck` y los tests.
