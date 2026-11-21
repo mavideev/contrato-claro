@@ -329,8 +329,11 @@ export function scoped(userId: string, db: Db = defaultDb()) {
       async setPreapproval(subscriptionId: string, mpPreapprovalId: string) {
         await db.update(subscriptions).set({ mpPreapprovalId }).where(and(eq(subscriptions.id, subscriptionId), eq(subscriptions.userId, userId)));
       },
+      /** Activa: se cancela al fin del ciclo (ya pagado). Pendiente o pausada: no hay nada que terminar, se cancela ya. */
       async cancel(subscriptionId: string) {
-        await db.update(subscriptions).set({ cancelAtPeriodEnd: true }).where(and(eq(subscriptions.id, subscriptionId), eq(subscriptions.userId, userId)));
+        const own = and(eq(subscriptions.id, subscriptionId), eq(subscriptions.userId, userId));
+        const [row] = await db.update(subscriptions).set({ cancelAtPeriodEnd: true }).where(and(own, eq(subscriptions.status, "authorized"))).returning({ id: subscriptions.id });
+        if (!row) await db.update(subscriptions).set({ status: "cancelled" }).where(own);
       },
       /** Páginas extra compradas dentro del ciclo vigente (spec 06, top-up). */
       async startTopup(subscriptionCycleId: string, amountCents: number, pagesGranted: number) {

@@ -57,7 +57,27 @@ async function Subscription() {
   }
 
   if (subscription.status === "pending") {
-    return <p className="text-ink-2">Estamos esperando que confirmes el débito automático con Mercado Pago.</p>;
+    const plan = await getPlan(subscription.planId);
+    return (
+      <div className="flex max-w-[640px] flex-col gap-4 rounded-2xl border border-line-soft bg-surface p-6 md:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <Kicker>Suscripción en curso</Kicker>
+            <p className="font-display text-2xl font-semibold">{plan?.name ?? "Plan"}</p>
+          </div>
+          <Pill tone="attention">Esperando confirmación</Pill>
+        </div>
+        <p className="max-w-[52ch] text-[15px] leading-relaxed text-ink-2">
+          Iniciaste la suscripción a este plan, pero todavía no nos llegó la confirmación de Mercado Pago. Si ya autorizaste el débito automático, puede demorar unos minutos en reflejarse acá; probá recargar la página en un rato.
+        </p>
+        <p className="max-w-[52ch] text-[15px] leading-relaxed text-ink-2">Si no llegaste a confirmarlo o te arrepentiste, podés cancelar este intento y elegir de nuevo.</p>
+        <form action={cancelSubscription.bind(null, subscription.id)}>
+          <Button type="submit" variant="outline">
+            Cancelar este intento
+          </Button>
+        </form>
+      </div>
+    );
   }
 
   const [plan, cycle] = await Promise.all([getPlan(subscription.planId), db.billing.activeCycle()]);

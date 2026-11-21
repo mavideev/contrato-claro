@@ -186,6 +186,29 @@ describe("scoped(): suscripciones (spec 06)", () => {
     }
   });
 
+  it("cancelar una suscripción pendiente la cancela ya, no al fin de ciclo", async () => {
+    const otherUserId = await throwawayUser();
+    try {
+      const me = scoped(otherUserId);
+      const sub = await me.billing.start(planId);
+      await me.billing.cancel(sub.id);
+      const [updated] = await db().select().from(subscriptions).where(eq(subscriptions.id, sub.id));
+      expect(updated.status).toBe("cancelled");
+      expect(updated.cancelAtPeriodEnd).toBe(false);
+    } finally {
+      await db().delete(subscriptions).where(eq(subscriptions.userId, otherUserId));
+      await db().delete(user).where(eq(user.id, otherUserId));
+    }
+  });
+
+  it("cancelar una suscripción autorizada la deja para el fin del ciclo", async () => {
+    const { sub } = await authorizedCycle();
+    await scoped(sub.userId).billing.cancel(sub.id);
+    const [updated] = await db().select().from(subscriptions).where(eq(subscriptions.id, sub.id));
+    expect(updated.status).toBe("authorized");
+    expect(updated.cancelAtPeriodEnd).toBe(true);
+  });
+
   it("sin suscripción autorizada, no hay ciclo vigente", async () => {
     const otherUserId = await throwawayUser();
     try {

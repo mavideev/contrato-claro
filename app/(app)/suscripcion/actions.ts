@@ -31,7 +31,16 @@ export async function subscribe(planId: string): Promise<void> {
 
 export async function cancelSubscription(subscriptionId: string): Promise<void> {
   const user = await requireUser("/suscripcion");
-  await scoped(user.id).billing.cancel(subscriptionId);
+  const db = scoped(user.id);
+  const subscription = await db.billing.current();
+  if (subscription?.id === subscriptionId && subscription.mpPreapprovalId) {
+    try {
+      await subscriptionProvider().cancelPreapproval(subscription.mpPreapprovalId);
+    } catch (err) {
+      console.error("[suscripción] no se pudo avisar la cancelación a Mercado Pago", { subscriptionId, err });
+    }
+  }
+  await db.billing.cancel(subscriptionId);
   redirect("/suscripcion");
 }
 
