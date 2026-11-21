@@ -18,15 +18,23 @@ export async function subscribe(planId: string): Promise<void> {
   const plan = await getPlan(planId);
   if (!plan) redirect("/suscripcion");
 
-  const { redirectUrl, preapprovalId } = await subscriptionProvider().createPreapproval({
-    subscriptionId: subscription.id,
-    planName: plan.name,
-    amountCents: plan.priceCents,
-    payerEmail: user.email,
-    returnUrl: `${env().APP_URL}/suscripcion`,
-  });
-  await db.billing.setPreapproval(subscription.id, preapprovalId);
-  redirect(redirectUrl);
+  let created: { redirectUrl: string; preapprovalId: string };
+  try {
+    created = await subscriptionProvider().createPreapproval({
+      subscriptionId: subscription.id,
+      planName: plan.name,
+      amountCents: plan.priceCents,
+      payerEmail: user.email,
+      returnUrl: `${env().APP_URL}/suscripcion`,
+    });
+  } catch (err) {
+    console.error("[suscripción] no se pudo iniciar en Mercado Pago", { subscriptionId: subscription.id, err });
+    await db.billing.cancel(subscription.id);
+    redirect("/suscripcion?error=mp");
+  }
+
+  await db.billing.setPreapproval(subscription.id, created.preapprovalId);
+  redirect(created.redirectUrl);
 }
 
 export async function cancelSubscription(subscriptionId: string): Promise<void> {

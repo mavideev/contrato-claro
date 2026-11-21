@@ -13,7 +13,7 @@ import { buyTopup, cancelSubscription, subscribe } from "./actions";
 // Pantalla agregada (navegación del panel): suscripción mensual con cupo de páginas (spec 06).
 export const metadata: Metadata = { title: "Mi suscripción · Contrato Claro" };
 
-export default function Page() {
+export default function Page({ searchParams }: PageProps<"/suscripcion">) {
   return (
     <PanelShell current="suscripcion">
       <MobileBrand />
@@ -25,14 +25,15 @@ export default function Page() {
         />
         <Title>Mi suscripción</Title>
         <Suspense fallback={<div aria-hidden className="h-40 animate-pulse rounded-[14px] bg-line-soft" />}>
-          <Subscription />
+          <Subscription searchParams={searchParams} />
         </Suspense>
       </div>
     </PanelShell>
   );
 }
 
-async function Subscription() {
+async function Subscription({ searchParams }: Pick<PageProps<"/suscripcion">, "searchParams">) {
+  const { error } = await searchParams;
   const user = await requireUser("/suscripcion");
   const db = scoped(user.id);
   const [subscription, activePlans] = await Promise.all([db.billing.current(), listActivePlans()]);
@@ -40,6 +41,11 @@ async function Subscription() {
   if (!subscription) {
     return (
       <div className="flex flex-col gap-6">
+        {error === "mp" && (
+          <p className="rounded-xl border border-[#E8D3A2] bg-surface px-4 py-3.5 text-[15px] text-attention-fg">
+            No pudimos iniciar la suscripción con Mercado Pago. Probá de nuevo en un rato.
+          </p>
+        )}
         <p className="max-w-[58ch] text-[15px] leading-relaxed text-ink-2">
           Suscribite y analizá cuando quieras: un cupo de páginas por mes, con el re-chequeo del día de la firma incluido.
         </p>
