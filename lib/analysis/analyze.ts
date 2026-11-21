@@ -3,7 +3,8 @@ import { and, asc, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as s from "@/db/schema";
 import { aiProvider } from "@/lib/ai/provider";
-import { CHECKLIST_VERSION, DNU_70_2023_DATE, PRE_DNU_FINDING, RENTAL_CHECKLIST } from "./checklists/rental-v1";
+import { checklistFor } from "./checklists";
+import { DNU_70_2023_DATE, PRE_DNU_FINDING } from "./checklists/rental-v1";
 
 // Análisis real con IA (etapa 3, spec 05 `runAnalysis`): hallazgos por
 // cláusula según el checklist, huella del contrato, y versión usada.
@@ -11,14 +12,17 @@ import { CHECKLIST_VERSION, DNU_70_2023_DATE, PRE_DNU_FINDING, RENTAL_CHECKLIST 
 
 const sha256 = (t: string) => createHash("sha256").update(t).digest("hex");
 
-export async function runAnalysis(db: PostgresJsDatabase<typeof s>, analysisId: string, signingDate: string | null): Promise<void> {
+export async function runAnalysis(db: PostgresJsDatabase<typeof s>, analysisId: string, signingDate: string | null): Promise<{ checklistVersion: string }> {
+  const [analysis] = await db.select({ contractType: s.analyses.contractType }).from(s.analyses).where(eq(s.analyses.id, analysisId)).limit(1);
+  const { version: checklistVersion, checklist } = checklistFor(analysis?.contractType ?? "rental");
+
   const [existing] = await db.select({ id: s.findings.id }).from(s.findings).where(eq(s.findings.analysisId, analysisId)).limit(1);
-  if (existing) return;
+  if (existing) return { checklistVersion };
 
   const clauses = await db.select().from(s.clauses).where(eq(s.clauses.analysisId, analysisId)).orderBy(asc(s.clauses.number));
   const byNumber = new Map(clauses.map((c) => [c.number, c]));
 
-  const aiFindings = clauses.length ? await aiProvider().analyzeRisks(clauses, RENTAL_CHECKLIST, { analysisId }) : [];
+  const aiFindings = clauses.length ? await aiProvider().analyzeRisks(clauses, checklist, analysis?.contractType ?? "rental", { analysisId }) : [];
   const rows = aiFindings
     .map((f) => {
       const clause = byNumber.get(f.clauseNumber);
@@ -28,7 +32,7 @@ export async function runAnalysis(db: PostgresJsDatabase<typeof s>, analysisId: 
     .filter((f) => f !== null);
 
   // Contrato firmado antes del DNU 70/2023: el checklist (ley vigente hoy) no aplica del todo.
-  if (signingDate && signingDate < DNU_70_2023_DATE && clauses[0]) {
+  if (analysis?.contractType === "rental" && signingDate && signingDate < DNU_70_2023_DATE && clauses[0]) {
     rows.unshift({ analysisId, clauseId: clauses[0].id, ...PRE_DNU_FINDING });
   }
 
@@ -48,6 +52,6 @@ export async function runAnalysis(db: PostgresJsDatabase<typeof s>, analysisId: 
       clauseHashes: Object.fromEntries(clauses.map((c) => [c.number, c.sha256])),
     })
     .onConflictDoNothing();
-}
 
-export { CHECKLIST_VERSION };
+  return { checklistVersion };
+}

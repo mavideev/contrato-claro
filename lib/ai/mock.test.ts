@@ -19,7 +19,7 @@ describe("simulador de IA", () => {
 
   it("lee los datos clave del contrato de muestra", () => {
     const [first] = sampleContracts();
-    expect(guessFields(splitClauses([first.text]))).toEqual({
+    expect(guessFields(splitClauses([first.text]), "rental")).toEqual({
       landlord: "[Nombre del locador]",
       tenant: "[Nombre del locatario]",
       property: '[Calle 123, piso 4 "B"]',
@@ -37,9 +37,9 @@ describe("simulador de IA", () => {
 
   it("dólares y fiador", () => {
     const contracts = sampleContracts();
-    const articles = guessFields(splitClauses([contracts[2].text]));
+    const articles = guessFields(splitClauses([contracts[2].text]), "rental");
     expect(articles).toMatchObject({ initialRent: "USD 500", currency: "USD", term: "36 meses", deposit: "2 meses" });
-    const dashes = guessFields(splitClauses([contracts[1].text]));
+    const dashes = guessFields(splitClauses([contracts[1].text]), "rental");
     expect(dashes).toMatchObject({ guarantee: "Fiador", adjustment: "Semestral por ICL", landlord: "[Nombre]", initialRent: "$ 380.000" });
   });
 });

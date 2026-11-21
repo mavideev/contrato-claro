@@ -22,18 +22,18 @@ El usuario sube una foto, un PDF, un Word o pega el texto de un contrato. La app
 
 ## 2. Alcance
 
-**Incluye:** alquiler de vivienda; carga por foto, PDF, Word o texto; informe con semáforo por cláusula y cita de la cláusula original; re-chequeo del día de la firma; cuentas; pago con Mercado Pago; panel de análisis; informe en PDF.
+**Incluye:** alquiler de vivienda, compraventa y boleto de compraventa de inmuebles; carga por foto, PDF, Word o texto; informe con semáforo por cláusula y cita de la cláusula original; re-chequeo del día de la firma; cuentas; pago con Mercado Pago; panel de análisis; informe en PDF.
 
-**No incluye por ahora:** app nativa, compraventa y boleto completos, normativa provincial o municipal, firma digital y sellado de tiempo, revisión humana integrada, integraciones con registros públicos.
+**No incluye por ahora:** app nativa, normativa provincial o municipal, firma digital y sellado de tiempo, revisión humana integrada, integraciones con registros públicos.
 
 ## 3. Funcionalidades
 
 - **Captura:** foto con la cámara del celular desde el navegador (`capture`), subida de imagen, PDF o Word, texto pegado. Varias páginas por contrato, vista previa, aviso de foto borrosa, compresión y corrección de orientación en el navegador.
 - **Extracción:** texto directo de PDF y Word; visión para fotos y escaneos; división en cláusulas; campos críticos (partes, inmueble, plazo, valor, ajuste, depósito, garantía, rescisión, expensas, comisión, moneda). El usuario confirma los datos leídos de una foto.
-- **Análisis e informe:** checklist de alquiler con salida JSON validada; semáforo (alto, atención, sin alertas); explicación y cita de la cláusula; simulador de ajuste a 12 meses; PDF.
+- **Análisis e informe:** checklist por tipo de contrato (alquiler, compraventa, boleto) con salida JSON validada; semáforo (alto, atención, sin alertas); explicación y cita de la cláusula; simulador de ajuste a 12 meses (alquiler); PDF.
 - **Re-chequeo (extra pago):** se compara la versión final contra la analizada (hash exacto para archivos digitales, diff por cláusula y tolerancia a errores de lectura para fotos). Resultado: «idéntico» o lista de cambios, con certificado descargable. No afirma autenticidad ni validez legal.
 - **Cuentas y pagos:** registro e inicio de sesión; pago por análisis; el informe completo se desbloquea al confirmarse el pago por webhook; panel con historial y estados.
-- **Más adelante:** revisión humana paga, compraventa y boleto, plan para inmobiliarias.
+- **Más adelante:** revisión humana paga, plan para inmobiliarias.
 
 ## 4. Mockups
 

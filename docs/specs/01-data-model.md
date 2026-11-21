@@ -22,7 +22,7 @@ Definir el esquema inicial en Postgres (Drizzle + migraciones versionadas) que c
 
 | Tabla | Columnas principales | Notas |
 |---|---|---|
-| `analyses` | user_id, contract_type `rental\|sale\|boleto`, status (ver abajo), signing_date `date` nullable, property_label, checklist_version, confirmed_fields `jsonb`, preview `jsonb` (conteos por nivel), error_code | `sale` y `boleto` existen en el enum pero la UI las muestra como «Próximamente» |
+| `analyses` | user_id, contract_type `rental\|sale\|boleto`, status (ver abajo), signing_date `date` nullable, property_label, checklist_version, confirmed_fields `jsonb`, preview `jsonb` (conteos por nivel), error_code | cada `contract_type` tiene su propio checklist y sus propios campos en "Confirmar datos" (`lib/analysis/checklists/`, `lib/analysis/fields.ts`) |
 | `documents` | analysis_id, role `original\|recheck`, kind `photo\|pdf\|docx\|text`, mime, size_bytes, storage_key, page_count, sha256, delete_after, deleted_at | el texto pegado se guarda como objeto `text/plain` |
 | `document_pages` | document_id, page_number, storage_key, width, height, blur_score | fotos: una fila por página |
 | `clauses` | analysis_id, number, title, text, sha256, page_from, page_to | |

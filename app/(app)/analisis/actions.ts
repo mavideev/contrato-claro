@@ -2,7 +2,8 @@
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { FIELDS } from "@/lib/analysis/fields";
+import { contractType as contractTypeEnum } from "@/db/schema";
+import { fieldsFor } from "@/lib/analysis/fields";
 import { samplePreview } from "@/lib/analysis/sample-report";
 import { requireUser, type CurrentUser } from "@/lib/auth/session";
 import { analysisEntitlement } from "@/lib/billing/entitlement";
@@ -63,7 +64,9 @@ const json = (v: FormDataEntryValue | null) => {
 
 export async function startAnalysis(_: FormState, form: FormData): Promise<FormState> {
   const user = await requireUser("/analisis/nuevo");
-  if (form.get("contractType") !== "rental") return { error: "Por ahora solo analizamos contratos de alquiler." };
+  const contractTypeParsed = z.enum(contractTypeEnum.enumValues).safeParse(form.get("contractType"));
+  if (!contractTypeParsed.success) return { error: "Elegí el tipo de contrato." };
+  const contractType = contractTypeParsed.data;
   const parsed = startSchema.safeParse({ method: form.get("method"), file: json(form.get("file")), pages: json(form.get("pages")), text: form.get("text") ?? "" });
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -102,6 +105,7 @@ export async function startAnalysis(_: FormState, form: FormData): Promise<FormS
     await putObject(key, body, "text/plain; charset=utf-8");
     upload = { kind: "text", mime: "text/plain", sizeBytes: body.byteLength, storageKey: key };
   }
+  upload.contractType = contractType;
 
   // "Pagar antes de subir": sin suscripción con cupo ni un pago ya aprobado, no se sube nada.
   const entitlement = await analysisEntitlement(user.id);
@@ -130,19 +134,22 @@ export async function analysisStatus(id: string): Promise<string | null> {
   return (await scoped(user.id).analyses.get(id))?.status ?? null;
 }
 
-const confirmSchema = z.object({
-  ...Object.fromEntries(FIELDS.map((f) => [f.key, z.string().trim().max(300)])),
-  signingDate: z.union([z.literal(""), z.iso.date({ error: "Revisá la fecha de firma." })]),
-});
-
 export async function confirmAnalysis(id: string, _: FormState, form: FormData): Promise<FormState> {
   const user = await requireUser(`/analisis/${id}/confirmar`);
+  const db = scoped(user.id);
+  const analysis = await db.analyses.get(id);
+  if (!analysis) return { error: "Este análisis ya no se puede editar." };
+
+  const fields = fieldsFor(analysis.contractType);
+  const confirmSchema = z.object({
+    ...Object.fromEntries(fields.map((f) => [f.key, z.string().trim().max(300)])),
+    signingDate: z.union([z.literal(""), z.iso.date({ error: "Revisá la fecha de firma." })]),
+  });
   const parsed = confirmSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const { signingDate, ...rest } = parsed.data as Record<string, string>;
-  const confirmedFields = Object.fromEntries(FIELDS.map((f) => [f.key, rest[f.key] ?? ""]));
-  const db = scoped(user.id);
+  const confirmedFields = Object.fromEntries(fields.map((f) => [f.key, rest[f.key] ?? ""]));
   // Etapa 2: vista previa de ejemplo sobre las cláusulas reales (la checklist con IA es la etapa 3).
   const row = await db.analyses.confirm(id, {
     confirmedFields,

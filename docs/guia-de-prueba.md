@@ -60,8 +60,12 @@ Tocá **Mis análisis** (arriba a la derecha).
 Seguí con la cuenta nueva de la parte B.
 
 **C1. Subir un contrato**
-Tocá **Subir mi primer contrato**, elegí **Pegar texto** y pegá un contrato de alquiler. Si no tenés uno a mano, abrí el archivo `evals/contratos/01-ordinales.txt` del proyecto y copiá todo. Tocá **Analizar contrato**.
+Tocá **Subir mi primer contrato**. Arriba podés elegir el tipo de contrato: **Alquiler**, **Compraventa** o **Boleto**. Para esta prueba dejá **Alquiler**, elegí **Pegar texto** y pegá un contrato de alquiler. Si no tenés uno a mano, abrí el archivo `evals/contratos/01-ordinales.txt` del proyecto y copiá todo. Tocá **Analizar contrato**.
 ✔️ Aparece «Leyendo tu contrato» unos segundos y después «Confirmá los datos clave», con los datos sacados del texto (por ejemplo, Valor inicial «$ 450.000»).
+
+**C1b. Compraventa o boleto (opcional)**
+Repetí C1 a C5 eligiendo **Compraventa** o **Boleto** y pegando un contrato de ese tipo.
+✔️ «Confirmá los datos clave» muestra otros campos (Vendedor, Comprador, Precio, etc.) y el informe usa un checklist de riesgos distinto al de alquiler.
 
 **C2. Confirmar**
 Cambiá el **Inmueble** por una dirección cualquiera y tocá **Confirmar y analizar**.

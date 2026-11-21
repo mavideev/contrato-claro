@@ -24,6 +24,7 @@ import { db as defaultDb, type Db } from "@/lib/db";
 type PaymentKind = (typeof payments.$inferSelect)["kind"];
 type AnalysisStatus = (typeof analyses.$inferSelect)["status"];
 type DocumentKind = (typeof documents.$inferSelect)["kind"];
+type ContractType = (typeof analyses.$inferSelect)["contractType"];
 
 // Un id mal formado no llega a la base (Postgres rechazaría el uuid con un error 500).
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -87,7 +88,7 @@ export function scoped(userId: string, db: Db = defaultDb()) {
         ]);
         return { analysis, clauses: clauseRows, findings: findingRows };
       },
-      create(values: { contractType?: "rental"; status: AnalysisStatus; confirmedFields?: ConfirmedFields }) {
+      create(values: { contractType?: ContractType; status: AnalysisStatus; confirmedFields?: ConfirmedFields }) {
         return db
           .insert(analyses)
           .values({ ...values, userId })
@@ -106,13 +107,14 @@ export function scoped(userId: string, db: Db = defaultDb()) {
         storageKey: string;
         pages?: { storageKey: string; sizeBytes: number }[];
         subscriptionCycleId?: string;
+        contractType?: ContractType;
       }) {
         return db.transaction(async (tx) => {
           const [analysis] = await tx
             .insert(analyses)
             .values({
               userId,
-              contractType: "rental",
+              contractType: upload.contractType ?? "rental",
               status: "extracting",
               billingMode: upload.subscriptionCycleId ? "subscription" : "one_time",
               subscriptionCycleId: upload.subscriptionCycleId,

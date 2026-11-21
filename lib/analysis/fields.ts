@@ -1,8 +1,8 @@
-import type { ConfirmedFields } from "@/db/schema";
+import type { analyses, ConfirmedFields } from "@/db/schema";
 
-// Los 11 campos críticos de §3 más la moneda (spec 03, corrección 5), en el
-// orden de la pantalla «Confirmar datos». `wide`: ocupa las dos columnas.
-export const FIELDS: { key: keyof ConfirmedFields; label: string; wide?: boolean }[] = [
+type FieldDef = { key: keyof ConfirmedFields; label: string; wide?: boolean };
+
+const RENTAL_FIELDS: FieldDef[] = [
   { key: "landlord", label: "Locador" },
   { key: "tenant", label: "Locatario" },
   { key: "property", label: "Inmueble", wide: true },
@@ -16,3 +16,41 @@ export const FIELDS: { key: keyof ConfirmedFields; label: string; wide?: boolean
   { key: "expenses", label: "Expensas" },
   { key: "commission", label: "Comisión" },
 ];
+
+const SALE_FIELDS: FieldDef[] = [
+  { key: "seller", label: "Vendedor" },
+  { key: "buyer", label: "Comprador" },
+  { key: "property", label: "Inmueble", wide: true },
+  { key: "price", label: "Precio" },
+  { key: "currency", label: "Moneda" },
+  { key: "paymentForm", label: "Forma de pago y seña" },
+  { key: "signingTerm", label: "Plazo para escriturar" },
+  { key: "deliveryTerm", label: "Entrega de posesión" },
+  { key: "titleStatus", label: "Estado de dominio" },
+  { key: "debtsStatus", label: "Deudas y expensas" },
+  { key: "commission", label: "Comisión inmobiliaria" },
+];
+
+const BOLETO_FIELDS: FieldDef[] = [
+  { key: "seller", label: "Vendedor / Desarrolladora" },
+  { key: "buyer", label: "Comprador" },
+  { key: "property", label: "Inmueble", wide: true },
+  { key: "price", label: "Precio" },
+  { key: "currency", label: "Moneda" },
+  { key: "paymentForm", label: "Forma de pago y cuotas" },
+  { key: "deliveryTerm", label: "Plazo de entrega / posesión" },
+  { key: "signingTerm", label: "Plazo para escriturar" },
+  { key: "titleStatus", label: "Estado de dominio del terreno" },
+  { key: "cession", label: "Cesión del boleto" },
+  { key: "guarantee", label: "Garantías de la desarrolladora" },
+];
+
+export const FIELDS_BY_TYPE: Record<typeof analyses.$inferSelect.contractType, FieldDef[]> = {
+  rental: RENTAL_FIELDS,
+  sale: SALE_FIELDS,
+  boleto: BOLETO_FIELDS,
+};
+
+export function fieldsFor(contractType: typeof analyses.$inferSelect.contractType): FieldDef[] {
+  return FIELDS_BY_TYPE[contractType];
+}

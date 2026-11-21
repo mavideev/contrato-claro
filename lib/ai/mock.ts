@@ -1,7 +1,7 @@
 import type { ConfirmedFields } from "@/db/schema";
 import { SAMPLE_CLAUSES } from "@/lib/analysis/sample-report";
 import type { Clause } from "@/lib/extraction/clauses";
-import type { AiProvider, RiskFinding } from "./types";
+import type { AiProvider, ContractType, RiskFinding } from "./types";
 
 // Simulador de IA, para trabajar sin ANTHROPIC_API_KEY (como el simulador de pagos).
 // - Fotos: no las mira. Devuelve el contrato de ejemplo repartido en tantas
@@ -22,16 +22,84 @@ export const mockAi: AiProvider = {
   async readPages(pages) {
     return sampleContractPages(pages.length);
   },
-  async extractFields(clauses) {
-    return guessFields(clauses);
+  async extractFields(clauses, contractType) {
+    return guessFields(clauses, contractType);
   },
-  async analyzeRisks(clauses) {
-    return guessRisks(clauses);
+  async analyzeRisks(clauses, _checklist, contractType) {
+    return guessRisks(clauses, contractType);
   },
 };
 
-/** Hallazgos con reglas simples: marca "attention" cuando falta una aclaración típica (checklist rental-v1). */
-export function guessRisks(clauses: Clause[]): RiskFinding[] {
+/** Hallazgos con reglas simples: marca "attention" cuando falta una aclaración típica, según el checklist del tipo. */
+export function guessRisks(clauses: Clause[], contractType: ContractType): RiskFinding[] {
+  if (contractType === "sale") return guessSaleRisks(clauses);
+  if (contractType === "boleto") return guessBoletoRisks(clauses);
+  return guessRentalRisks(clauses);
+}
+
+function guessSaleRisks(clauses: Clause[]): RiskFinding[] {
+  const findings: RiskFinding[] = [];
+  const find = (re: RegExp) => clauses.find((c) => re.test(c.title));
+
+  if (!find(/dominio|hipoteca|gravamen|inhibici/i)) {
+    const anchor = clauses[0];
+    if (anchor) {
+      findings.push({
+        clauseNumber: anchor.number,
+        level: "attention",
+        title: "Falta aclarar el estado de dominio",
+        explanation: "No encontramos una cláusula que diga que el inmueble se entrega libre de deudas, embargos e hipotecas.",
+        whatToAsk: "Pedí que se aclare el estado de dominio del inmueble.",
+      });
+    }
+  }
+
+  const signing = find(/escritur/i);
+  if (signing && !/d[ií]as|mes(es)?/i.test(signing.text)) {
+    findings.push({
+      clauseNumber: signing.number,
+      level: "attention",
+      title: "Plazo para escriturar sin fecha concreta",
+      explanation: "No encontramos un plazo concreto para la escrituración.",
+      whatToAsk: "Preguntá en cuánto tiempo se va a escriturar.",
+    });
+  }
+
+  return findings;
+}
+
+function guessBoletoRisks(clauses: Clause[]): RiskFinding[] {
+  const findings: RiskFinding[] = [];
+  const find = (re: RegExp) => clauses.find((c) => re.test(c.title));
+
+  const delivery = find(/entrega|posesi[oó]n/i);
+  if (delivery && !/d[ií]as|mes(es)?|\d{4}/i.test(delivery.text)) {
+    findings.push({
+      clauseNumber: delivery.number,
+      level: "attention",
+      title: "Plazo de entrega sin fecha concreta",
+      explanation: "No encontramos una fecha o plazo concreto para la entrega/posesión del inmueble.",
+      whatToAsk: "Pedí que se aclare la fecha de entrega y qué pasa si se demora.",
+    });
+  }
+
+  if (!find(/garant|cauci[oó]n|fideicomiso/i)) {
+    const anchor = clauses[0];
+    if (anchor) {
+      findings.push({
+        clauseNumber: anchor.number,
+        level: "attention",
+        title: "Sin garantías mencionadas",
+        explanation: "No encontramos ninguna garantía de la desarrolladora (seguro de caución, fideicomiso al costo, u otra) ante un incumplimiento.",
+        whatToAsk: "Preguntá qué garantía respalda la entrega si la desarrolladora no termina la obra.",
+      });
+    }
+  }
+
+  return findings;
+}
+
+function guessRentalRisks(clauses: Clause[]): RiskFinding[] {
   const findings: RiskFinding[] = [];
   const find = (re: RegExp) => clauses.find((c) => re.test(c.title));
 
@@ -86,7 +154,54 @@ const MAX = 300;
 const clip = (s: string | undefined) => (s ? s.replace(/\s+/g, " ").trim().slice(0, MAX) : "");
 
 /** Datos clave con reglas simples: busca primero en la cláusula del tema y después en todo el contrato. */
-export function guessFields(clauses: Clause[]): ConfirmedFields {
+export function guessFields(clauses: Clause[], contractType: ContractType): ConfirmedFields {
+  if (contractType === "sale") return guessSaleFields(clauses);
+  if (contractType === "boleto") return guessBoletoFields(clauses);
+  return guessRentalFields(clauses);
+}
+
+function propertyOf(all: string): string | undefined {
+  return all.match(/(?:ubicad[oa] en|sit[oa] en|de calle|inmueble de)\s+((?:\[[^\]]+\]|[^,.\n])+(?:,\s*(?:piso|depto|dpto|unidad)[^,.\n]*)?)/i)?.[1];
+}
+
+function commonSaleFields(clauses: Clause[]) {
+  const all = clauses.map((c) => c.text).join("\n");
+  const about = (re: RegExp) => clauses.filter((c) => re.test(c.title)).map((c) => c.text).join("\n") || all;
+
+  const priceText = about(/precio|valor/i);
+  const money = priceText.match(/(?:\$|ARS|USD|U\$S|US\$)\s?\d[\d.,]*\d/i) ?? all.match(/(?:\$|ARS|USD|U\$S|US\$)\s?\d[\d.,]*\d/i);
+  const dollars = /USD|U\$S|US\$|d[oó]lares/i.test(money?.[0] ?? "") || /d[oó]lares/i.test(priceText);
+
+  return {
+    seller: clip(party(clauses, /vendedor(?:a)?|desarrolladora/i)),
+    buyer: clip(party(clauses, /comprador(?:a)?/i)),
+    property: clip(propertyOf(all)),
+    price: clip(money?.[0]?.replace(/^(?:\$|ARS|USD|U\$S|US\$)\s?/i, dollars ? "USD " : "$ ")),
+    currency: money ? (dollars ? "USD" : "ARS") : "",
+    paymentForm: clip(about(/forma de pago|cuotas?|se[ñn]a/i)),
+    signingTerm: clip(about(/escritur/i)),
+    deliveryTerm: clip(about(/entrega|posesi[oó]n/i)),
+    titleStatus: clip(about(/dominio|hipoteca|gravamen|inhibici/i)),
+  };
+}
+
+function guessSaleFields(clauses: Clause[]): ConfirmedFields {
+  const commission = clauses.find((c) => /comisi/i.test(c.title))?.text;
+  const debtsStatus = clauses.filter((c) => /expensas|deudas/i.test(c.title)).map((c) => c.text).join("\n");
+  return { ...commonSaleFields(clauses), debtsStatus: clip(debtsStatus), commission: clip(commission?.split(/(?<=\.)\s/)[0]) };
+}
+
+function guessBoletoFields(clauses: Clause[]): ConfirmedFields {
+  const guarantee = clauses.filter((c) => /garant/i.test(c.title)).map((c) => c.text).join("\n");
+  const cession = clauses.filter((c) => /cesi[oó]n/i.test(c.title)).map((c) => c.text).join("\n");
+  return {
+    ...commonSaleFields(clauses),
+    cession: clip(cession),
+    guarantee: /cauci[oó]n/i.test(guarantee) ? "Seguro de caución" : /fideicomiso/i.test(guarantee) ? "Fideicomiso al costo" : "",
+  };
+}
+
+function guessRentalFields(clauses: Clause[]): ConfirmedFields {
   const all = clauses.map((c) => c.text).join("\n");
   const about = (re: RegExp) => clauses.filter((c) => re.test(c.title)).map((c) => c.text).join("\n") || all;
 

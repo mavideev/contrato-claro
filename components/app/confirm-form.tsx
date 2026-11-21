@@ -5,7 +5,7 @@ import type { FormState } from "@/app/(app)/analisis/actions";
 import { BottomBar } from "@/components/app/flow";
 import { Button, buttonClass } from "@/components/ui/button";
 import type { ConfirmedFields } from "@/db/schema";
-import { FIELDS } from "@/lib/analysis/fields";
+import type { FIELDS_BY_TYPE } from "@/lib/analysis/fields";
 
 // Prototipo 3 · Confirmar datos / móvil 4. Si el origen es una foto, el monto
 // queda en «Revisá» hasta que se toca, con el aviso al costado.
@@ -15,6 +15,7 @@ export type AmountSource = { label: string; before: string; highlight: string; a
 
 type Props = {
   action: (state: FormState, form: FormData) => Promise<FormState>;
+  fields: (typeof FIELDS_BY_TYPE)[keyof typeof FIELDS_BY_TYPE];
   values: ConfirmedFields;
   signingDate: string | null;
   fromPhoto: boolean;
@@ -23,7 +24,7 @@ type Props = {
 
 const labelClass = "text-xs font-semibold tracking-[0.08em] text-ink-3 uppercase md:text-[13px]";
 
-export function ConfirmForm({ action, values, signingDate, fromPhoto, source }: Props) {
+export function ConfirmForm({ action, fields, values, signingDate, fromPhoto, source }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const [amountChecked, setAmountChecked] = useState(!fromPhoto);
   const warn = !amountChecked;
@@ -59,8 +60,8 @@ export function ConfirmForm({ action, values, signingDate, fromPhoto, source }: 
         )}
 
         <div className="grid w-full min-w-0 flex-1 grid-cols-1 gap-x-[18px] gap-y-3.5 md:grid-cols-2 md:gap-y-5">
-          {FIELDS.map((f) => {
-            const isAmount = f.key === "initialRent";
+          {fields.map((f) => {
+            const isAmount = f.key === "initialRent" || f.key === "price";
             const pill = isAmount && fromPhoto ? (warn ? "Revisá" : "Confirmado") : values[f.key] ? "Leído" : null;
             const amber = isAmount && warn;
             return (

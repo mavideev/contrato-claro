@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { analyses } from "@/db/schema";
-import { CHECKLIST_VERSION, runAnalysis } from "@/lib/analysis/analyze";
+import { runAnalysis } from "@/lib/analysis/analyze";
 import { db } from "@/lib/db";
 import { inngest } from "@/lib/inngest/client";
 
@@ -20,11 +20,11 @@ export const analysisPaid = inngest.createFunction(
         .returning({ signingDate: analyses.signingDate });
       if (!current) return;
 
-      await runAnalysis(db(), analysisId, current.signingDate);
+      const { checklistVersion } = await runAnalysis(db(), analysisId, current.signingDate);
 
       await db()
         .update(analyses)
-        .set({ status: "ready", checklistVersion: CHECKLIST_VERSION })
+        .set({ status: "ready", checklistVersion })
         .where(and(eq(analyses.id, analysisId), eq(analyses.status, "analyzing")));
     });
 

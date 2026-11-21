@@ -6,7 +6,7 @@ import { aiUsage, type ConfirmedFields } from "@/db/schema";
 import { db } from "@/lib/db";
 import { ExtractionError } from "@/lib/extraction/read";
 import type { Clause } from "@/lib/extraction/clauses";
-import type { AiCallContext, AiProvider, PageImage, RiskFinding } from "./types";
+import type { AiCallContext, AiProvider, ContractType, PageImage, RiskFinding } from "./types";
 
 const MODEL = "claude-haiku-5-5";
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
@@ -28,7 +28,7 @@ const RisksSchema = z.object({
   ),
 });
 
-const FieldsSchema = z.object({
+const RentalFieldsSchema = z.object({
   landlord: z.string().optional(),
   tenant: z.string().optional(),
   property: z.string().optional(),
@@ -42,6 +42,46 @@ const FieldsSchema = z.object({
   expenses: z.string().optional(),
   commission: z.string().optional(),
 });
+
+const SaleFieldsSchema = z.object({
+  seller: z.string().optional(),
+  buyer: z.string().optional(),
+  property: z.string().optional(),
+  price: z.string().optional(),
+  currency: z.string().optional(),
+  paymentForm: z.string().optional(),
+  signingTerm: z.string().optional(),
+  deliveryTerm: z.string().optional(),
+  titleStatus: z.string().optional(),
+  debtsStatus: z.string().optional(),
+  commission: z.string().optional(),
+});
+
+const BoletoFieldsSchema = z.object({
+  seller: z.string().optional(),
+  buyer: z.string().optional(),
+  property: z.string().optional(),
+  price: z.string().optional(),
+  currency: z.string().optional(),
+  paymentForm: z.string().optional(),
+  deliveryTerm: z.string().optional(),
+  signingTerm: z.string().optional(),
+  titleStatus: z.string().optional(),
+  cession: z.string().optional(),
+  guarantee: z.string().optional(),
+});
+
+const FIELDS_SCHEMA_BY_TYPE: Record<ContractType, z.ZodTypeAny> = {
+  rental: RentalFieldsSchema,
+  sale: SaleFieldsSchema,
+  boleto: BoletoFieldsSchema,
+};
+
+const CONTRACT_NAME_BY_TYPE: Record<ContractType, string> = {
+  rental: "contrato de alquiler",
+  sale: "contrato de compraventa",
+  boleto: "boleto de compraventa",
+};
 
 export async function pingAnthropic(): Promise<void> {
   await client.models.retrieve(MODEL);
@@ -80,8 +120,8 @@ export const anthropicAi: AiProvider = {
     if (pages.length === 0) return [];
     const singlePdf = pages.length === 1 && pages[0].mime === "application/pdf";
     const instructions = singlePdf
-      ? 'Transcribí el texto exacto de este contrato de alquiler escaneado, página por página, tal cual aparece, sin resumir ni corregir errores de tipeo. Devolvé un elemento de "pages" por cada página real del documento, en orden.'
-      : 'Cada imagen es una foto de una página distinta de un contrato de alquiler, en el mismo orden en que aparecen. Transcribí el texto exacto visible en cada una, sin resumir ni corregir errores de tipeo. Devolvé un elemento de "pages" por cada imagen, en el mismo orden.';
+      ? 'Transcribí el texto exacto de este contrato escaneado, página por página, tal cual aparece, sin resumir ni corregir errores de tipeo. Devolvé un elemento de "pages" por cada página real del documento, en orden.'
+      : 'Cada imagen es una foto de una página distinta de un contrato, en el mismo orden en que aparecen. Transcribí el texto exacto visible en cada una, sin resumir ni corregir errores de tipeo. Devolvé un elemento de "pages" por cada imagen, en el mismo orden.';
 
     const response = await client.messages.parse({
       model: MODEL,
@@ -93,16 +133,16 @@ export const anthropicAi: AiProvider = {
     return response.parsed_output?.pages ?? [];
   },
 
-  async extractFields(clauses: Clause[], context?: AiCallContext) {
+  async extractFields(clauses: Clause[], contractType: ContractType, context?: AiCallContext) {
     const contract = clauses.map((c) => `${c.title}\n${c.text}`).join("\n\n");
     const response = await client.messages.parse({
       model: MODEL,
       max_tokens: 4096,
-      output_config: { format: zodOutputFormat(FieldsSchema) },
+      output_config: { format: zodOutputFormat(FIELDS_SCHEMA_BY_TYPE[contractType]) },
       messages: [
         {
           role: "user",
-          content: `Leé este contrato de alquiler argentino y completá los datos clave con lo que dice el texto, palabra por palabra cuando se pueda. Dejá un campo sin completar si el contrato no lo dice.\n\n${contract}`,
+          content: `Leé este ${CONTRACT_NAME_BY_TYPE[contractType]} argentino y completá los datos clave con lo que dice el texto, palabra por palabra cuando se pueda. Dejá un campo sin completar si el contrato no lo dice.\n\n${contract}`,
         },
       ],
     });
@@ -110,7 +150,7 @@ export const anthropicAi: AiProvider = {
     return (response.parsed_output ?? {}) satisfies ConfirmedFields;
   },
 
-  async analyzeRisks(clauses: Clause[], checklist: string, context?: AiCallContext) {
+  async analyzeRisks(clauses: Clause[], checklist: string, _contractType: ContractType, context?: AiCallContext) {
     const contract = clauses.map((c) => `Cláusula ${c.number} — ${c.title}\n${c.text}`).join("\n\n");
     const response = await client.messages.parse({
       model: MODEL,

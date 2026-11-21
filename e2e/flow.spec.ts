@@ -70,9 +70,6 @@ test.describe("con un usuario nuevo", () => {
     await signUpAndVerify(page, request);
     await payForAnalysis(page);
     await expect(
-      page.getByRole("button", { name: /Compraventa/ }),
-    ).toBeDisabled();
-    await expect(
       page.getByText("Para sacar fotos, entrá desde tu celular."),
     ).toBeVisible();
 

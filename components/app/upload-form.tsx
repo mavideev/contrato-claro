@@ -8,7 +8,7 @@ import { Kicker, STORAGE_NOTICE } from "@/components/ui/typography";
 import { useIsMobile } from "./use-is-mobile";
 
 // Prototipo 2 · Subir contrato. Correcciones de la spec 03: «Sacar foto» solo
-// en mobile (en desktop, aviso), Compraventa y Boleto «Próximamente».
+// en mobile (en desktop, aviso).
 // El archivo sube directo a S3 antes de llamar a la acción (no viaja en el formulario).
 
 const MAX_MB = 20;
@@ -27,11 +27,12 @@ async function submit(prev: FormState, form: FormData): Promise<FormState> {
 }
 
 type Method = "foto" | "archivo" | "texto";
+type ContractType = "rental" | "sale" | "boleto";
 
-const TYPES = [
-  { value: "rental", label: "Alquiler", enabled: true },
-  { value: "sale", label: "Compraventa", enabled: false },
-  { value: "boleto", label: "Boleto", enabled: false },
+const TYPES: { value: ContractType; label: string }[] = [
+  { value: "rental", label: "Alquiler" },
+  { value: "sale", label: "Compraventa" },
+  { value: "boleto", label: "Boleto" },
 ];
 
 const icon = (d: ReactNode) => (
@@ -59,6 +60,7 @@ const METHODS: { value: Method; label: string; hint: string; icon: ReactNode; mo
 
 export function UploadForm() {
   const isMobile = useIsMobile();
+  const [contractType, setContractType] = useState<ContractType>("rental");
   const [chosen, setChosen] = useState<Method | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -84,7 +86,7 @@ export function UploadForm() {
       }}
       className="flex max-w-[620px] flex-1 flex-col gap-5 md:gap-6"
     >
-      <input type="hidden" name="contractType" value="rental" />
+      <input type="hidden" name="contractType" value={contractType} />
       <input type="hidden" name="method" value={method} />
 
       <fieldset className="flex flex-col gap-2.5">
@@ -96,14 +98,13 @@ export function UploadForm() {
             <button
               key={t.value}
               type="button"
-              disabled={!t.enabled}
-              aria-pressed={t.enabled}
+              aria-pressed={t.value === contractType}
+              onClick={() => setContractType(t.value)}
               className={`inline-flex h-10 items-center gap-2 rounded-full border px-4 text-[15px] font-medium whitespace-nowrap md:px-[18px] md:text-base ${
-                t.enabled ? "border-ink bg-ink text-white" : "cursor-not-allowed border-line bg-surface text-ink-3"
+                t.value === contractType ? "border-ink bg-ink text-white" : "border-line bg-surface text-ink-3 hover:border-primary"
               }`}
             >
               {t.label}
-              {!t.enabled && <span className="text-xs font-semibold">Próximamente</span>}
             </button>
           ))}
         </div>

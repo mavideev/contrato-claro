@@ -139,7 +139,16 @@ export type ConfirmedFields = Partial<
     | "termination"
     | "expenses"
     | "commission"
-    | "currency",
+    | "currency"
+    | "seller"
+    | "buyer"
+    | "price"
+    | "paymentForm"
+    | "deliveryTerm"
+    | "signingTerm"
+    | "titleStatus"
+    | "debtsStatus"
+    | "cession",
     string
   >
 >;

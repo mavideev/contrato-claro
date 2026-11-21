@@ -5,6 +5,7 @@ import { confirmAnalysis } from "@/app/(app)/analisis/actions";
 import { ConfirmForm, type AmountSource } from "@/components/app/confirm-form";
 import { FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { BackLink, Title } from "@/components/ui/typography";
+import { fieldsFor } from "@/lib/analysis/fields";
 import { loadAnalysis } from "@/lib/analysis/load";
 import { EDITABLE_STATUSES } from "@/lib/db/scoped";
 
@@ -26,7 +27,8 @@ async function Confirm({ params }: Pick<PageProps<"/analisis/[id]/confirmar">, "
   if (!EDITABLE_STATUSES.includes(analysis.status)) redirect(`/analisis/${analysis.id}/estado`);
   const [document, clauses] = await Promise.all([db.analyses.original(analysis.id), db.analyses.clauses(analysis.id)]);
   const fromPhoto = document?.kind === "photo";
-  const source = fromPhoto ? amountSource(clauses, analysis.confirmedFields?.initialRent) : null;
+  const amount = analysis.confirmedFields?.initialRent ?? analysis.confirmedFields?.price;
+  const source = fromPhoto ? amountSource(clauses, amount) : null;
 
   return (
     <>
@@ -39,6 +41,7 @@ async function Confirm({ params }: Pick<PageProps<"/analisis/[id]/confirmar">, "
       </div>
       <ConfirmForm
         action={confirmAnalysis.bind(null, analysis.id)}
+        fields={fieldsFor(analysis.contractType)}
         values={analysis.confirmedFields ?? {}}
         signingDate={analysis.signingDate}
         fromPhoto={fromPhoto}
