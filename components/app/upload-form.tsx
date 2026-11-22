@@ -74,7 +74,7 @@ export function UploadForm() {
   const [chosen, setChosen] = useState<Method | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [supportingNames, setSupportingNames] = useState<string[]>([]);
+  const [supportingFiles, setSupportingFiles] = useState<File[]>([]);
   const [supportingError, setSupportingError] = useState<string | null>(null);
   const method: Method = chosen && (chosen !== "foto" || isMobile) ? chosen : isMobile ? "foto" : "archivo";
   const [state, action, pending] = useActionState<FormState, FormData>(submit, {});
@@ -88,21 +88,32 @@ export function UploadForm() {
     else setFileError(null);
   }
 
-  function pickSupporting(input: HTMLInputElement) {
-    const files = Array.from(input.files ?? []);
-    if (files.length > MAX_SUPPORTING) {
-      setSupportingError(`Podés adjuntar hasta ${MAX_SUPPORTING} documentos.`);
-      setSupportingNames([]);
-      return;
-    }
-    const tooBig = files.find((f) => f.size > MAX_MB * 1024 * 1024);
+  function addSupporting(newFiles: File[]) {
+    if (!newFiles.length) return;
+    const tooBig = newFiles.find((f) => f.size > MAX_MB * 1024 * 1024);
     if (tooBig) {
       setSupportingError(`"${tooBig.name}" pesa más de ${MAX_MB} MB.`);
-      setSupportingNames([]);
       return;
     }
+    const badType = newFiles.find((f) => !/pdf|wordprocessingml|^image\//.test(fileType(f)));
+    if (badType) {
+      setSupportingError(`"${badType.name}" tiene que ser un PDF, un Word o una foto.`);
+      return;
+    }
+    setSupportingFiles((prev) => {
+      const merged = [...prev, ...newFiles];
+      if (merged.length > MAX_SUPPORTING) {
+        setSupportingError(`Podés adjuntar hasta ${MAX_SUPPORTING} documentos.`);
+        return prev;
+      }
+      setSupportingError(null);
+      return merged;
+    });
+  }
+
+  function removeSupporting(index: number) {
+    setSupportingFiles((prev) => prev.filter((_, i) => i !== index));
     setSupportingError(null);
-    setSupportingNames(files.map((f) => f.name));
   }
 
   return (
@@ -111,6 +122,8 @@ export function UploadForm() {
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
+        form.delete("supportingUpload");
+        supportingFiles.forEach((f) => form.append("supportingUpload", f));
         startTransition(() => action(form));
       }}
       className="flex max-w-[620px] flex-1 flex-col gap-5 md:gap-6"
@@ -226,28 +239,50 @@ export function UploadForm() {
             <Kicker>Documentos de respaldo (opcional)</Kicker>
           </legend>
           <label
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              addSupporting(Array.from(e.dataTransfer.files));
+            }}
             className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 border-dashed border-[#B9C4CC] bg-surface p-5 text-center text-[15px] text-ink-2"
           >
-            {supportingNames.length ? (
-              <span className="font-semibold text-ink">
-                {supportingNames.length} documento{supportingNames.length === 1 ? "" : "s"} elegido{supportingNames.length === 1 ? "" : "s"}
+            {supportingFiles.length >= MAX_SUPPORTING ? (
+              <span className="font-semibold text-ink">Llegaste al máximo de {MAX_SUPPORTING}</span>
+            ) : supportingFiles.length ? (
+              <span>
+                Arrastrá otro acá o <span className="font-semibold text-primary-hover underline">elegí uno más</span>
               </span>
             ) : (
               <span>
-                Elegí uno o más archivos (informe de dominio, planos, etc.)
+                Arrastrá tus archivos acá o <span className="font-semibold text-primary-hover underline">elegilos desde tu dispositivo</span>
               </span>
             )}
-            <span className="text-[13px] text-ink-3">{supportingNames.length ? supportingNames.join(", ") : `PDF, Word o foto · hasta ${MAX_SUPPORTING}, ${MAX_MB} MB cada uno`}</span>
+            <span className="text-[13px] text-ink-3">PDF, Word o foto · hasta {MAX_SUPPORTING}, {MAX_MB} MB cada uno</span>
             <input
               type="file"
-              name="supportingUpload"
               multiple
+              disabled={supportingFiles.length >= MAX_SUPPORTING}
               aria-label="Documentos de respaldo"
               accept=".pdf,.docx,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={(e) => pickSupporting(e.currentTarget)}
+              onChange={(e) => {
+                addSupporting(Array.from(e.currentTarget.files ?? []));
+                e.currentTarget.value = "";
+              }}
               className="sr-only"
             />
           </label>
+          {supportingFiles.length > 0 && (
+            <ul className="flex flex-col gap-1.5">
+              {supportingFiles.map((f, i) => (
+                <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-2 rounded-lg border border-line-soft bg-surface px-3 py-2 text-[13px] text-ink-2">
+                  <span className="truncate">{f.name}</span>
+                  <button type="button" onClick={() => removeSupporting(i)} aria-label={`Quitar ${f.name}`} className="shrink-0 font-semibold text-ink-3 hover:text-high-fg">
+                    Quitar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           {supportingError && (
             <p role="alert" className="text-sm text-high-fg">
               {supportingError}
