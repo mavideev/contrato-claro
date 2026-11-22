@@ -73,6 +73,7 @@ export function ConfirmForm({ action, fields, values, signingDate, fromPhoto, so
                   <input
                     id={f.key}
                     name={f.key}
+                    maxLength={500}
                     defaultValue={values[f.key] ?? ""}
                     onChange={isAmount ? () => setAmountChecked(true) : undefined}
                     className={`h-[52px] w-full rounded-[10px] bg-surface pr-28 pl-4 text-[17px] text-ink ${amber ? "border-2 border-attention" : "border border-line"}`}

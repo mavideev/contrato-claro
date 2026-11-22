@@ -28,47 +28,49 @@ const RisksSchema = z.object({
   ),
 });
 
+const short = () => z.string().max(300).optional();
+
 const RentalFieldsSchema = z.object({
-  landlord: z.string().optional(),
-  tenant: z.string().optional(),
-  property: z.string().optional(),
-  term: z.string().optional(),
-  initialRent: z.string().optional(),
-  currency: z.string().optional(),
-  adjustment: z.string().optional(),
-  deposit: z.string().optional(),
-  guarantee: z.string().optional(),
-  termination: z.string().optional(),
-  expenses: z.string().optional(),
-  commission: z.string().optional(),
+  landlord: short(),
+  tenant: short(),
+  property: short(),
+  term: short(),
+  initialRent: short(),
+  currency: short(),
+  adjustment: short(),
+  deposit: short(),
+  guarantee: short(),
+  termination: short(),
+  expenses: short(),
+  commission: short(),
 });
 
 const SaleFieldsSchema = z.object({
-  seller: z.string().optional(),
-  buyer: z.string().optional(),
-  property: z.string().optional(),
-  price: z.string().optional(),
-  currency: z.string().optional(),
-  paymentForm: z.string().optional(),
-  signingTerm: z.string().optional(),
-  deliveryTerm: z.string().optional(),
-  titleStatus: z.string().optional(),
-  debtsStatus: z.string().optional(),
-  commission: z.string().optional(),
+  seller: short(),
+  buyer: short(),
+  property: short(),
+  price: short(),
+  currency: short(),
+  paymentForm: short(),
+  signingTerm: short(),
+  deliveryTerm: short(),
+  titleStatus: short(),
+  debtsStatus: short(),
+  commission: short(),
 });
 
 const BoletoFieldsSchema = z.object({
-  seller: z.string().optional(),
-  buyer: z.string().optional(),
-  property: z.string().optional(),
-  price: z.string().optional(),
-  currency: z.string().optional(),
-  paymentForm: z.string().optional(),
-  deliveryTerm: z.string().optional(),
-  signingTerm: z.string().optional(),
-  titleStatus: z.string().optional(),
-  cession: z.string().optional(),
-  guarantee: z.string().optional(),
+  seller: short(),
+  buyer: short(),
+  property: short(),
+  price: short(),
+  currency: short(),
+  paymentForm: short(),
+  deliveryTerm: short(),
+  signingTerm: short(),
+  titleStatus: short(),
+  cession: short(),
+  guarantee: short(),
 });
 
 const FIELDS_SCHEMA_BY_TYPE: Record<ContractType, z.ZodTypeAny> = {
@@ -142,7 +144,7 @@ export const anthropicAi: AiProvider = {
       messages: [
         {
           role: "user",
-          content: `Leé este ${CONTRACT_NAME_BY_TYPE[contractType]} argentino y completá los datos clave con lo que dice el texto, palabra por palabra cuando se pueda. Dejá un campo sin completar si el contrato no lo dice.\n\n${contract}`,
+          content: `Leé este ${CONTRACT_NAME_BY_TYPE[contractType]} argentino y completá los datos clave con lo que dice el texto, palabra por palabra cuando se pueda. Cada campo es un dato corto (una frase, no la cláusula entera) — resumí si hace falta. Dejá un campo sin completar si el contrato no lo dice.\n\n${contract}`,
         },
       ],
     });

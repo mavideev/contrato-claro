@@ -157,11 +157,15 @@ export async function confirmAnalysis(id: string, _: FormState, form: FormData):
 
   const fields = fieldsFor(analysis.contractType);
   const confirmSchema = z.object({
-    ...Object.fromEntries(fields.map((f) => [f.key, z.string().trim().max(300)])),
+    ...Object.fromEntries(fields.map((f) => [f.key, z.string().trim().max(500)])),
     signingDate: z.union([z.literal(""), z.iso.date({ error: "Revisá la fecha de firma." })]),
   });
   const parsed = confirmSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const field = fields.find((f) => f.key === issue.path[0]);
+    return { error: field ? `"${field.label}" es demasiado largo. Acortalo e intentá de nuevo.` : "Revisá los datos e intentá de nuevo." };
+  }
 
   const { signingDate, ...rest } = parsed.data as Record<string, string>;
   const confirmedFields = Object.fromEntries(fields.map((f) => [f.key, rest[f.key] ?? ""]));
