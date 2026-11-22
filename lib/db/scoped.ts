@@ -212,6 +212,27 @@ export function scoped(userId: string, db: Db = defaultDb()) {
         ]);
         return { analysis, fingerprint: fingerprint ?? null, clauseCount, latest: latest ?? null, payment };
       },
+      async storageKeys(id: string) {
+        if (!(await getAnalysis(id))) return [];
+        const [docs, pages, certs] = await Promise.all([
+          db.select({ key: documents.storageKey }).from(documents).where(eq(documents.analysisId, id)),
+          db
+            .select({ key: documentPages.storageKey })
+            .from(documentPages)
+            .innerJoin(documents, eq(documentPages.documentId, documents.id))
+            .where(eq(documents.analysisId, id)),
+          db.select({ key: rechecks.certificateKey }).from(rechecks).where(eq(rechecks.analysisId, id)),
+        ]);
+        return [...docs, ...pages, ...certs].flatMap((r) => (r.key ? [r.key] : []));
+      },
+      async delete(id: string) {
+        return db.transaction(async (tx) => {
+          if (!(await tx.select({ id: analyses.id }).from(analyses).where(ownAnalysis(id)).limit(1)).length) return false;
+          await tx.update(payments).set({ analysisId: null }).where(eq(payments.analysisId, id));
+          const [row] = await tx.delete(analyses).where(ownAnalysis(id)).returning({ id: analyses.id });
+          return !!row;
+        });
+      },
     },
     payments: {
       /** Historial con el análisis al que corresponde cada pago (null en las páginas extra, spec 06). */

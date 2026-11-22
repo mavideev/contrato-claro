@@ -85,6 +85,27 @@ describe("scoped(): escrituras", () => {
     expect(await scoped(demoId).analyses.get("no-es-un-uuid")).toBeNull();
   });
 
+  it("borrar un análisis junta sus claves de storage y no borra sus pagos (solo desvincula)", async () => {
+    const me = scoped(demoId);
+    const a = await me.analyses.createFromUpload(uploadStub);
+    const payment = await me.payments.start(a.id, "analysis", 1_000_00);
+    expect(await me.analyses.storageKeys(a.id)).toContain(uploadStub.storageKey);
+
+    expect(await me.analyses.delete(a.id)).toBe(true);
+    expect(await me.analyses.get(a.id)).toBeNull();
+
+    const [row] = await db().select().from(payments).where(eq(payments.id, payment!.id));
+    expect(row.analysisId).toBeNull();
+    await db().delete(payments).where(eq(payments.id, payment!.id));
+  });
+
+  it("no borra análisis ajenos, y en un id inexistente no rompe", async () => {
+    const [ajeno] = await scoped(otherId).analyses.list();
+    expect(await scoped(demoId).analyses.delete(ajeno.id)).toBe(false);
+    expect(await scoped(otherId).analyses.get(ajeno.id)).not.toBeNull();
+    expect(await scoped(demoId).analyses.delete(randomUUID())).toBe(false);
+  });
+
   it("iniciar el pago dos veces reutiliza el pendiente", async () => {
     const me = scoped(demoId);
     const a = await me.analyses.create({ status: "preview_ready" });

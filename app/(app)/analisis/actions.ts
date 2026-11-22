@@ -149,6 +149,20 @@ export async function analysisStatus(id: string): Promise<string | null> {
   return (await scoped(user.id).analyses.get(id))?.status ?? null;
 }
 
+export async function deleteAnalysis(id: string): Promise<void> {
+  const user = await requireUser("/analisis");
+  const db = scoped(user.id);
+  const keys = await db.analyses.storageKeys(id);
+  try {
+    await inngest.send({ name: "analysis/deleted", data: { analysisId: id, storageKeys: keys } });
+  } catch (err) {
+    console.error("[análisis] no se pudo encolar el borrado de archivos", { analysisId: id, err });
+    redirect("/analisis?error=borrar");
+  }
+  await db.analyses.delete(id);
+  redirect("/analisis");
+}
+
 export async function confirmAnalysis(id: string, _: FormState, form: FormData): Promise<FormState> {
   const user = await requireUser(`/analisis/${id}/confirmar`);
   const db = scoped(user.id);
