@@ -168,7 +168,7 @@ export const anthropicAi: AiProvider = {
       : "";
     const conclusionBlock = `\n\nAdemás de los hallazgos por cláusula, completá el campo "conclusion": un cierre en lenguaje simple y claro, sin jerga legal sin explicar, pensado para ${
       viewerRoleLabel ? `la parte "${viewerRoleLabel}"` : "quien lee esto"
-    } — qué proteger específicamente desde ese lugar, no en términos neutros. Incluí: una conclusión general (¿el contrato está razonablemente equilibrado o tiene problemas serios para esa parte?), entre 2 y 4 recomendaciones concretas, y qué pedir o cambiar antes de firmar.`;
+    } — qué proteger específicamente desde ese lugar, no en términos neutros. Incluí: una conclusión general (¿el contrato está razonablemente equilibrado o tiene problemas serios para esa parte?), entre 2 y 4 recomendaciones concretas, y qué pedir o cambiar antes de firmar. Cerrá siempre recomendando confirmar todo esto con un escribano o abogado antes de decidir, y con la inmobiliaria también si hay una de por medio en la operación.`;
     const stream = client.messages.stream({
       model: MODEL,
       max_tokens: await modelMaxTokens(),
