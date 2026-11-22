@@ -88,6 +88,15 @@ describe("casos borde", () => {
     await expect(readDocument("pdf", await doc.save())).rejects.toMatchObject({ code: "pdf_without_text" });
   });
 
+  it("un PDF con una sola página escaneada (el resto con texto real) también se manda entero a la IA", async () => {
+    const { PDFDocument, StandardFonts } = await import("pdf-lib");
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    doc.addPage().drawText("PRIMERA: OBJETO. El locador alquila el inmueble.", { x: 50, y: 790, size: 11, font });
+    doc.addPage();
+    await expect(readDocument("pdf", await doc.save())).rejects.toMatchObject({ code: "pdf_without_text" });
+  });
+
   it("un archivo roto no se puede abrir", async () => {
     const err = await readDocument("pdf", new TextEncoder().encode("no soy un pdf")).catch((e) => e);
     expect(err).toBeInstanceOf(ExtractionError);

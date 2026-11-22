@@ -32,6 +32,7 @@ Revisión del documento completo (no solo cláusula por cláusula), y marcá el 
 - Cantidad de ejemplares firmados vs. cantidad de firmantes: ¿coincide?
 - ¿Falta una cláusula de jurisdicción (a qué tribunales se someten las partes)?
 - Sellado/impuesto de sellos: si el contrato no lo menciona, marcá "attention" indicando que conviene verificarlo (varía mucho según la jurisdicción, no lo asumas).
+- Cualquier cláusula que remita a las de incumplimiento, resolución o mora (por ejemplo, ante fallecimiento, incapacidad sobreviniente o cesión) — si esa remisión expone a esa parte a la misma consecuencia dura (pérdida de lo pagado, penalidad, etc.), marcá el riesgo también ahí, no solo en la cláusula de incumplimiento original.
 
 El texto puede traer pegados encabezados, pies de página o marcas de agua repetidos (ej. "DOCUMENTO DE PRUEBA", números de página, líneas de firma) en medio de una cláusula — ignorá esas partes al evaluar el riesgo, no son parte del contrato real.
 

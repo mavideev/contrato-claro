@@ -20,7 +20,8 @@ export class ExtractionError extends Error {
 export async function readDocument(kind: "pdf" | "docx" | "text", bytes: Uint8Array): Promise<string[]> {
   const pages = await read(kind, bytes);
   if (pages.length > MAX_PAGES) throw new ExtractionError("too_many_pages", `El documento tiene ${pages.length} páginas (máximo ${MAX_PAGES})`);
-  if (!hasText(pages)) {
+  const scanned = !hasText(pages) || (kind === "pdf" && pages.some((p) => !p.replace(/[^\p{L}]/gu, "").length));
+  if (scanned) {
     // Un PDF escaneado no trae texto: lo tiene que leer la IA como si fueran fotos.
     throw kind === "pdf" ? new ExtractionError("pdf_without_text", "El PDF no tiene texto seleccionable") : new ExtractionError("empty", "El documento no tiene texto");
   }
