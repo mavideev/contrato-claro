@@ -25,7 +25,7 @@ export default function Page({ params }: PageProps<"/analisis/[id]/confirmar">) 
 async function Confirm({ params }: Pick<PageProps<"/analisis/[id]/confirmar">, "params">) {
   const { analysis, db } = await loadAnalysis(params, "confirmar");
   if (!EDITABLE_STATUSES.includes(analysis.status)) redirect(`/analisis/${analysis.id}/estado`);
-  const [document, clauses] = await Promise.all([db.analyses.original(analysis.id), db.analyses.clauses(analysis.id)]);
+  const [document, clauses, supportingDocs] = await Promise.all([db.analyses.original(analysis.id), db.analyses.clauses(analysis.id), db.analyses.supportingDocs(analysis.id)]);
   const fromPhoto = document?.kind === "photo";
   const amount = analysis.confirmedFields?.initialRent ?? analysis.confirmedFields?.price;
   const source = fromPhoto ? amountSource(clauses, amount) : null;
@@ -38,6 +38,9 @@ async function Confirm({ params }: Pick<PageProps<"/analisis/[id]/confirmar">, "
         <p className="text-[15px] text-ink-2 md:text-[17px]">
           {fromPhoto ? "Los leímos de tu foto. Corregí lo que haga falta antes de analizar." : "Los leímos de tu contrato. Corregí lo que haga falta antes de analizar."}
         </p>
+        {supportingDocs.length > 0 && (
+          <p className="text-[13.5px] text-ink-3">Documentos de respaldo adjuntos: {supportingDocs.map((d) => d.label).join(", ")}</p>
+        )}
       </div>
       <ConfirmForm
         action={confirmAnalysis.bind(null, analysis.id)}

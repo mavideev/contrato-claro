@@ -27,5 +27,5 @@ export interface AiProvider {
   /** Los campos críticos (documento base §3) leídos de las cláusulas. Vacío si el contrato no lo dice. */
   extractFields(clauses: Clause[], contractType: ContractType, context?: AiCallContext): Promise<ConfirmedFields>;
   /** Hallazgos de riesgo por cláusula, según un checklist (etapa 3, spec 05). */
-  analyzeRisks(clauses: Clause[], checklist: string, contractType: ContractType, context?: AiCallContext): Promise<RiskFinding[]>;
+  analyzeRisks(clauses: Clause[], checklist: string, contractType: ContractType, supportingText: string, context?: AiCallContext): Promise<RiskFinding[]>;
 }

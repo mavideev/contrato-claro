@@ -12,6 +12,7 @@ import { useIsMobile } from "./use-is-mobile";
 // El archivo sube directo a S3 antes de llamar a la acción (no viaja en el formulario).
 
 const MAX_MB = 20;
+const MAX_SUPPORTING = 5;
 
 /** Sube el archivo elegido y le pasa a la acción solo la clave. */
 async function submit(prev: FormState, form: FormData): Promise<FormState> {
@@ -23,6 +24,15 @@ async function submit(prev: FormState, form: FormData): Promise<FormState> {
     if ("error" in res) return res;
     form.set("file", JSON.stringify(res.uploaded[0]));
   }
+
+  const supporting = form.getAll("supportingUpload").filter((f): f is File => f instanceof File && f.size > 0);
+  form.delete("supportingUpload");
+  if (supporting.length) {
+    const res = await uploadFiles(supporting.map((f) => ({ blob: f, type: fileType(f) })));
+    if ("error" in res) return res;
+    form.set("supportingDocs", JSON.stringify(res.uploaded.map((u, i) => ({ ...u, name: supporting[i].name }))));
+  }
+
   return startAnalysis(prev, form);
 }
 
@@ -64,6 +74,8 @@ export function UploadForm() {
   const [chosen, setChosen] = useState<Method | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [supportingNames, setSupportingNames] = useState<string[]>([]);
+  const [supportingError, setSupportingError] = useState<string | null>(null);
   const method: Method = chosen && (chosen !== "foto" || isMobile) ? chosen : isMobile ? "foto" : "archivo";
   const [state, action, pending] = useActionState<FormState, FormData>(submit, {});
 
@@ -74,6 +86,23 @@ export function UploadForm() {
     if (file && !/pdf|wordprocessingml/.test(type)) setFileError("Subí un PDF o un Word (.docx).");
     else if (file && file.size > MAX_MB * 1024 * 1024) setFileError(`El archivo pesa más de ${MAX_MB} MB.`);
     else setFileError(null);
+  }
+
+  function pickSupporting(input: HTMLInputElement) {
+    const files = Array.from(input.files ?? []);
+    if (files.length > MAX_SUPPORTING) {
+      setSupportingError(`Podés adjuntar hasta ${MAX_SUPPORTING} documentos.`);
+      setSupportingNames([]);
+      return;
+    }
+    const tooBig = files.find((f) => f.size > MAX_MB * 1024 * 1024);
+    if (tooBig) {
+      setSupportingError(`"${tooBig.name}" pesa más de ${MAX_MB} MB.`);
+      setSupportingNames([]);
+      return;
+    }
+    setSupportingError(null);
+    setSupportingNames(files.map((f) => f.name));
   }
 
   return (
@@ -191,6 +220,42 @@ export function UploadForm() {
         )}
       </fieldset>
 
+      {method !== "foto" && (
+        <fieldset className="flex flex-col gap-2.5">
+          <legend className="mb-2.5">
+            <Kicker>Documentos de respaldo (opcional)</Kicker>
+          </legend>
+          <label
+            className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 border-dashed border-[#B9C4CC] bg-surface p-5 text-center text-[15px] text-ink-2"
+          >
+            {supportingNames.length ? (
+              <span className="font-semibold text-ink">
+                {supportingNames.length} documento{supportingNames.length === 1 ? "" : "s"} elegido{supportingNames.length === 1 ? "" : "s"}
+              </span>
+            ) : (
+              <span>
+                Elegí uno o más archivos (informe de dominio, planos, etc.)
+              </span>
+            )}
+            <span className="text-[13px] text-ink-3">{supportingNames.length ? supportingNames.join(", ") : `PDF, Word o foto · hasta ${MAX_SUPPORTING}, ${MAX_MB} MB cada uno`}</span>
+            <input
+              type="file"
+              name="supportingUpload"
+              multiple
+              aria-label="Documentos de respaldo"
+              accept=".pdf,.docx,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={(e) => pickSupporting(e.currentTarget)}
+              className="sr-only"
+            />
+          </label>
+          {supportingError && (
+            <p role="alert" className="text-sm text-high-fg">
+              {supportingError}
+            </p>
+          )}
+        </fieldset>
+      )}
+
       {((method === "archivo" && fileError) || state.error) && (
         <p role="alert" className="text-sm text-high-fg">
           {(method === "archivo" && fileError) || state.error}
@@ -203,7 +268,7 @@ export function UploadForm() {
             Abrir cámara
           </Link>
         ) : (
-          <Button type="submit" disabled={pending || (method === "archivo" && !!fileError)} className="min-h-[52px] w-full text-[17px]">
+          <Button type="submit" disabled={pending || (method === "archivo" && !!fileError) || !!supportingError} className="min-h-[52px] w-full text-[17px]">
             {pending ? (method === "archivo" ? "Subiendo…" : "Enviando…") : "Analizar contrato"}
           </Button>
         )}

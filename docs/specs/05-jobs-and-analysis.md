@@ -11,7 +11,7 @@ Correr fuera de la petición HTTP todo lo que tarda: lectura de archivos, extrac
 | Evento | Función | Pasos | Etapa |
 |---|---|---|---|
 | `test/hello` | `hello` | devuelve un saludo | 0 |
-| `analysis/uploaded` | `extractAnalysis` | 1) texto directo (pdf.js / mammoth) o visión para fotos; 2) dividir en cláusulas; 3) extraer los campos críticos; 4) estado → `awaiting_confirmation` | 2 |
+| `analysis/uploaded` | `extractAnalysis` | 1) texto directo (pdf.js / mammoth) o visión para fotos; 2) dividir en cláusulas; 3) extraer los campos críticos; 4) leer documentos de respaldo si hay (mismo paso 1, sin dividir en cláusulas); 5) estado → `awaiting_confirmation` | 2 |
 | `analysis/confirmed` | `previewAnalysis` | checklist rápida → conteos por nivel → `preview_ready` | 3 |
 | `analysis/paid` | `runAnalysis` | hallazgos por cláusula (JSON validado con Zod) → `findings` → huellas → PDF → `ready` | 3 |
 | `recheck/uploaded` | `runRecheck` | extraer la versión final → comparar hash y diff por cláusula → certificado | 4 |
@@ -25,6 +25,7 @@ Cada paso de IA usa `step.run` para que un reintento no repita pasos que ya term
 2. El navegador sube directo a S3, sin pasar por la app.
 3. Al terminar, el cliente avisa y el servidor verifica tamaño y tipo con un `HEAD` del objeto. Recién entonces emite `analysis/uploaded`.
 4. Límites: 20 MB por archivo, 30 páginas por contrato, tipos `image/jpeg|png|heic|webp`, `application/pdf`, `.docx`.
+5. Opcional, junto con el contrato: hasta 5 documentos de respaldo (informe de dominio, planos, etc.), mismos límites de tamaño y tipo. La IA los usa como contexto al analizar los riesgos (etapa 3), citando siempre una cláusula del contrato — nunca tienen cláusulas propias. Sus páginas cuentan para el cupo de páginas de la suscripción, igual que el contrato.
 
 ## IA (etapas 2 y 3)
 

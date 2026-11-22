@@ -110,7 +110,7 @@ export const analysisStatus = pgEnum("analysis_status", [
   "ready",
   "failed",
 ]);
-export const documentRole = pgEnum("document_role", ["original", "recheck"]);
+export const documentRole = pgEnum("document_role", ["original", "recheck", "supporting"]);
 export const documentKind = pgEnum("document_kind", ["photo", "pdf", "docx", "text"]);
 export const findingLevel = pgEnum("finding_level", ["high", "attention", "none"]);
 export const recheckResult = pgEnum("recheck_result", ["pending", "identical", "changed", "failed"]);
@@ -193,6 +193,8 @@ export const documents = pgTable(
     storageKey: text().notNull(),
     pageCount: integer(),
     sha256: text(),
+    label: text(),
+    text: text(),
     deleteAfter: timestamp({ withTimezone: true }),
     deletedAt: timestamp({ withTimezone: true }),
     ...timestamps,

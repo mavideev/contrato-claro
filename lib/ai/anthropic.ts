@@ -150,13 +150,16 @@ export const anthropicAi: AiProvider = {
     return (response.parsed_output ?? {}) satisfies ConfirmedFields;
   },
 
-  async analyzeRisks(clauses: Clause[], checklist: string, _contractType: ContractType, context?: AiCallContext) {
+  async analyzeRisks(clauses: Clause[], checklist: string, _contractType: ContractType, supportingText: string, context?: AiCallContext) {
     const contract = clauses.map((c) => `Cláusula ${c.number} — ${c.title}\n${c.text}`).join("\n\n");
+    const supportingBlock = supportingText
+      ? `\n\nAdemás del contrato, se adjuntaron estos documentos de respaldo. Usalos para verificar lo que dice el contrato (por ejemplo, confirmar el estado de dominio contra un informe de dominio adjunto). Si hay una contradicción, marcá "high" en la cláusula del CONTRATO a la que corresponde — estos documentos no tienen número de cláusula propio, nunca cites uno de acá.\n\n${supportingText}`
+      : "";
     const response = await client.messages.parse({
       model: MODEL,
       max_tokens: 8192,
       output_config: { format: zodOutputFormat(RisksSchema) },
-      messages: [{ role: "user", content: `${checklist}\n\nContrato (cada cláusula con su número):\n\n${contract}` }],
+      messages: [{ role: "user", content: `${checklist}${supportingBlock}\n\nContrato (cada cláusula con su número):\n\n${contract}` }],
     });
     await recordUsage(context, "analyze_risks", response.usage);
 

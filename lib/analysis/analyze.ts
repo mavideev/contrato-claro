@@ -22,7 +22,16 @@ export async function runAnalysis(db: PostgresJsDatabase<typeof s>, analysisId: 
   const clauses = await db.select().from(s.clauses).where(eq(s.clauses.analysisId, analysisId)).orderBy(asc(s.clauses.number));
   const byNumber = new Map(clauses.map((c) => [c.number, c]));
 
-  const aiFindings = clauses.length ? await aiProvider().analyzeRisks(clauses, checklist, analysis?.contractType ?? "rental", { analysisId }) : [];
+  const supportingDocs = await db
+    .select({ label: s.documents.label, text: s.documents.text })
+    .from(s.documents)
+    .where(and(eq(s.documents.analysisId, analysisId), eq(s.documents.role, "supporting")));
+  const supportingText = supportingDocs
+    .filter((d) => d.text)
+    .map((d) => `Documento adjunto: ${d.label ?? "sin nombre"}\n${d.text}`)
+    .join("\n\n---\n\n");
+
+  const aiFindings = clauses.length ? await aiProvider().analyzeRisks(clauses, checklist, analysis?.contractType ?? "rental", supportingText, { analysisId }) : [];
   const rows = aiFindings
     .map((f) => {
       const clause = byNumber.get(f.clauseNumber);

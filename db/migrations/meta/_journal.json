@@ -50,6 +50,13 @@
       "when": 1793580887459,
       "tag": "0006_seed_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795304942849,
+      "tag": "0007_long_wrecking_crew",
+      "breakpoints": true
     }
   ]
 }

@@ -108,6 +108,7 @@ export function scoped(userId: string, db: Db = defaultDb()) {
         pages?: { storageKey: string; sizeBytes: number }[];
         subscriptionCycleId?: string;
         contractType?: ContractType;
+        supportingDocs?: { kind: DocumentKind; mime: string; sizeBytes: number; storageKey: string; name: string }[];
       }) {
         return db.transaction(async (tx) => {
           const [analysis] = await tx
@@ -126,6 +127,19 @@ export function scoped(userId: string, db: Db = defaultDb()) {
             .returning();
           if (upload.pages?.length) {
             await tx.insert(documentPages).values(upload.pages.map((p, i) => ({ documentId: document.id, pageNumber: i + 1, storageKey: p.storageKey })));
+          }
+          if (upload.supportingDocs?.length) {
+            await tx.insert(documents).values(
+              upload.supportingDocs.map((d) => ({
+                analysisId: analysis.id,
+                role: "supporting" as const,
+                kind: d.kind,
+                mime: d.mime,
+                sizeBytes: d.sizeBytes,
+                storageKey: d.storageKey,
+                label: d.name,
+              })),
+            );
           }
           return analysis;
         });
@@ -154,6 +168,10 @@ export function scoped(userId: string, db: Db = defaultDb()) {
           .orderBy(asc(documents.createdAt))
           .limit(1);
         return row ?? null;
+      },
+      async supportingDocs(id: string) {
+        if (!(await getAnalysis(id))) return [];
+        return db.select({ label: documents.label }).from(documents).where(and(eq(documents.analysisId, id), eq(documents.role, "supporting")));
       },
       async clauses(id: string) {
         if (!(await getAnalysis(id))) return [];

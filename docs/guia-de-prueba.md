@@ -67,6 +67,10 @@ Tocá **Subir mi primer contrato**. Arriba podés elegir el tipo de contrato: **
 Repetí C1 a C5 eligiendo **Compraventa** o **Boleto** y pegando un contrato de ese tipo.
 ✔️ «Confirmá los datos clave» muestra otros campos (Vendedor, Comprador, Precio, etc.) y el informe usa un checklist de riesgos distinto al de alquiler.
 
+**C1c. Documentos de respaldo (opcional)**
+Al subir, con el método **Subir PDF o Word**, abajo aparece "Documentos de respaldo (opcional)". Adjuntá uno o dos archivos cualquiera (por ejemplo, otro PDF corto).
+✔️ En «Confirmá los datos clave» aparece una línea con los nombres de los documentos adjuntos.
+
 **C2. Confirmar**
 Cambiá el **Inmueble** por una dirección cualquiera y tocá **Confirmar y analizar**.
 ✔️ Aparece «Tu vista previa está lista», con cuántos riesgos hay y el botón de pagar.

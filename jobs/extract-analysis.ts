@@ -52,6 +52,23 @@ export const extractAnalysis = inngest.createFunction(
     const fields = await step.run("datos clave", () => aiProvider().extractFields(clauses, contractType, { analysisId }));
     console.log("[análisis] datos clave extraídos", { analysisId, ai: aiProvider().name, camposLeidos: Object.values(fields).filter(Boolean).length });
 
+    const supporting = await step.run("leer documentos de respaldo", async () => {
+      const docs = await db().select().from(documents).where(and(eq(documents.analysisId, analysisId), eq(documents.role, "supporting")));
+      return Promise.all(
+        docs.map(async (doc) => {
+          try {
+            const result = await readDocumentPages(doc, analysisId);
+            return { documentId: doc.id, text: result.pages.join("\n\n"), pageCount: result.pages.length };
+          } catch (err) {
+            console.error("[análisis] no se pudo leer un documento de respaldo", { analysisId, documentId: doc.id, err });
+            return { documentId: doc.id, text: "", pageCount: 0 };
+          }
+        }),
+      );
+    });
+    const supportingPages = supporting.reduce((n, s) => n + s.pageCount, 0);
+    console.log("[análisis] documentos de respaldo leídos", { analysisId, documentos: supporting.length, paginas: supportingPages });
+
     await step.run("guardar", async () => {
       await db().transaction(async (tx) => {
         const [current] = await tx
@@ -64,14 +81,19 @@ export const extractAnalysis = inngest.createFunction(
         await tx.update(documents).set({ sha256: read.sha256, pageCount: read.pages.length }).where(eq(documents.id, read.documentId));
         await tx.delete(clausesTable).where(eq(clausesTable.analysisId, analysisId));
         await tx.insert(clausesTable).values(clauses.map((c) => ({ ...c, analysisId, sha256: sha256(c.text) })));
+        for (const s of supporting) {
+          await tx.update(documents).set({ text: s.text, pageCount: s.pageCount }).where(eq(documents.id, s.documentId));
+        }
 
         // Suscripción (spec 06): se descuenta recién acá, con la cantidad real de
-        // páginas, y solo una vez (pagesCharged hace de candado ante reintentos).
+        // páginas (contrato + documentos de respaldo), y solo una vez (pagesCharged
+        // hace de candado ante reintentos).
+        const totalPages = read.pages.length + supportingPages;
         if (current.billingMode === "subscription" && current.subscriptionCycleId && current.pagesCharged == null) {
-          await tx.update(analyses).set({ pagesCharged: read.pages.length }).where(eq(analyses.id, analysisId));
+          await tx.update(analyses).set({ pagesCharged: totalPages }).where(eq(analyses.id, analysisId));
           await tx
             .update(subscriptionCycles)
-            .set({ pagesUsed: sql`${subscriptionCycles.pagesUsed} + ${read.pages.length}` })
+            .set({ pagesUsed: sql`${subscriptionCycles.pagesUsed} + ${totalPages}` })
             .where(eq(subscriptionCycles.id, current.subscriptionCycleId));
         }
       });

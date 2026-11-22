@@ -44,6 +44,8 @@ export async function prepareUploads(files: z.input<typeof fileSchema>[]): Promi
 }
 
 const uploadedSchema = z.object({ key: z.string(), type: z.string(), size: z.coerce.number().int().positive() });
+const supportingDocSchema = uploadedSchema.extend({ name: z.string().trim().min(1).max(200) });
+const MAX_SUPPORTING_DOCS = 5;
 
 const startSchema = z.discriminatedUnion("method", [
   z.object({ method: z.literal("archivo"), file: uploadedSchema }),
@@ -74,11 +76,15 @@ export async function startAnalysis(_: FormState, form: FormData): Promise<FormS
   }
   const input = parsed.data;
 
+  const supportingParsed = z.array(supportingDocSchema).max(MAX_SUPPORTING_DOCS).safeParse(json(form.get("supportingDocs")) ?? []);
+  if (!supportingParsed.success) return { error: `Podés adjuntar hasta ${MAX_SUPPORTING_DOCS} documentos de respaldo.` };
+  const supporting = supportingParsed.data;
+
   // Las claves las firmó prepareUploads para este usuario; igual se revisa que
   // sean suyas y que el archivo haya llegado entero.
   const own = `users/${user.id}/uploads/`;
   const uploaded = input.method === "archivo" ? [input.file] : input.method === "foto" ? input.pages : [];
-  for (const f of uploaded) {
+  for (const f of [...uploaded, ...supporting]) {
     if (!f.key.startsWith(own) || !isAllowedType(f.type) || !(await verifyUpload(f.key, { contentType: f.type, size: f.size }))) {
       return { error: "El archivo no terminó de subirse. Probá de nuevo." };
     }
@@ -106,6 +112,15 @@ export async function startAnalysis(_: FormState, form: FormData): Promise<FormS
     upload = { kind: "text", mime: "text/plain", sizeBytes: body.byteLength, storageKey: key };
   }
   upload.contractType = contractType;
+  if (supporting.length) {
+    upload.supportingDocs = supporting.map((f) => ({
+      kind: f.type.startsWith("image/") ? ("photo" as const) : f.type === DOCX ? ("docx" as const) : ("pdf" as const),
+      mime: f.type,
+      sizeBytes: f.size,
+      storageKey: f.key,
+      name: f.name,
+    }));
+  }
 
   // "Pagar antes de subir": sin suscripción con cupo ni un pago ya aprobado, no se sube nada.
   const entitlement = await analysisEntitlement(user.id);
