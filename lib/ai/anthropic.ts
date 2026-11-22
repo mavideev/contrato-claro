@@ -131,19 +131,20 @@ export const anthropicAi: AiProvider = {
       ? 'Transcribí el texto exacto de este contrato escaneado, página por página, tal cual aparece, sin resumir ni corregir errores de tipeo. Devolvé un elemento de "pages" por cada página real del documento, en orden.'
       : 'Cada imagen es una foto de una página distinta de un contrato, en el mismo orden en que aparecen. Transcribí el texto exacto visible en cada una, sin resumir ni corregir errores de tipeo. Devolvé un elemento de "pages" por cada imagen, en el mismo orden.';
 
-    const response = await client.messages.parse({
+    const stream = client.messages.stream({
       model: MODEL,
       max_tokens: await modelMaxTokens(),
       output_config: { format: zodOutputFormat(PagesSchema) },
       messages: [{ role: "user", content: [...pages.map(pageBlock), { type: "text", text: instructions }] }],
     });
+    const response = await stream.finalMessage();
     await recordUsage(context, "read_pages", response.usage);
     return response.parsed_output?.pages ?? [];
   },
 
   async extractFields(clauses: Clause[], contractType: ContractType, context?: AiCallContext) {
     const contract = clauses.map((c) => `${c.title}\n${c.text}`).join("\n\n");
-    const response = await client.messages.parse({
+    const stream = client.messages.stream({
       model: MODEL,
       max_tokens: await modelMaxTokens(),
       output_config: { format: zodOutputFormat(FIELDS_SCHEMA_BY_TYPE[contractType]) },
@@ -154,6 +155,7 @@ export const anthropicAi: AiProvider = {
         },
       ],
     });
+    const response = await stream.finalMessage();
     await recordUsage(context, "extract_fields", response.usage);
     return (response.parsed_output ?? {}) satisfies ConfirmedFields;
   },
@@ -163,12 +165,13 @@ export const anthropicAi: AiProvider = {
     const supportingBlock = supportingText
       ? `\n\nAdemás del contrato, se adjuntaron estos documentos adicionales. Usalos para verificar lo que dice el contrato (por ejemplo, confirmar el estado de dominio contra un informe de dominio adjunto). Si hay una contradicción, marcá "high" en la cláusula del CONTRATO a la que corresponde — estos documentos no tienen número de cláusula propio, nunca cites uno de acá.\n\n${supportingText}`
       : "";
-    const response = await client.messages.parse({
+    const stream = client.messages.stream({
       model: MODEL,
       max_tokens: await modelMaxTokens(),
       output_config: { format: zodOutputFormat(RisksSchema) },
       messages: [{ role: "user", content: `${checklist}${supportingBlock}\n\nContrato (cada cláusula con su número):\n\n${contract}` }],
     });
+    const response = await stream.finalMessage();
     await recordUsage(context, "analyze_risks", response.usage);
 
     const findings = response.parsed_output?.findings ?? [];
