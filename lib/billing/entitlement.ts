@@ -22,7 +22,7 @@ export async function ensureQuota(userId: string): Promise<QuotaResult> {
 export type AnalysisEntitlement =
   | { mode: "subscription"; subscriptionCycleId: string }
   | { mode: "prepaid"; paymentId: string }
-  | { mode: "pending" }
+  | { mode: "pending"; paymentId: string }
   | { mode: "none" };
 
 export async function analysisEntitlement(userId: string): Promise<AnalysisEntitlement> {
@@ -31,6 +31,6 @@ export async function analysisEntitlement(userId: string): Promise<AnalysisEntit
 
   const prepaid = await scoped(userId).payments.latestPrepaid("analysis");
   if (prepaid?.status === "approved") return { mode: "prepaid", paymentId: prepaid.id };
-  if (prepaid?.status === "pending") return { mode: "pending" };
+  if (prepaid?.status === "pending") return { mode: "pending", paymentId: prepaid.id };
   return { mode: "none" };
 }

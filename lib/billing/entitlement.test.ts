@@ -4,6 +4,7 @@ import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { analyses, payments, plans, subscriptionCycles, subscriptions, user } from "@/db/schema";
 import { db, sql } from "@/lib/db";
+import { scoped } from "@/lib/db/scoped";
 import { analysisEntitlement, ensureQuota } from "./entitlement";
 
 /** Usuario descartable, sin nada de datos del seed ni de otros tests. */
@@ -86,8 +87,20 @@ describe("analysisEntitlement()", () => {
   it("con el pago todavía pendiente, pending", async () => {
     const u = await throwawayUser();
     try {
-      await db().insert(payments).values({ userId: u, kind: "analysis", status: "pending", amountCents: 100_000 });
-      expect(await analysisEntitlement(u)).toEqual({ mode: "pending" });
+      const [row] = await db().insert(payments).values({ userId: u, kind: "analysis", status: "pending", amountCents: 100_000 }).returning();
+      expect(await analysisEntitlement(u)).toEqual({ mode: "pending", paymentId: row.id });
+    } finally {
+      await db().delete(payments).where(eq(payments.userId, u));
+      await db().delete(user).where(eq(user.id, u));
+    }
+  });
+
+  it("cancelar un prepago pendiente libera para elegir de nuevo", async () => {
+    const u = await throwawayUser();
+    try {
+      const [row] = await db().insert(payments).values({ userId: u, kind: "analysis", status: "pending", amountCents: 100_000 }).returning();
+      await scoped(u).payments.cancelPrepaid(row.id);
+      expect(await analysisEntitlement(u)).toEqual({ mode: "none" });
     } finally {
       await db().delete(payments).where(eq(payments.userId, u));
       await db().delete(user).where(eq(user.id, u));

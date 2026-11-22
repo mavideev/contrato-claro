@@ -224,6 +224,12 @@ export async function prepayAnalysis(): Promise<void> {
   redirect(redirectUrl);
 }
 
+export async function cancelPrepay(paymentId: string): Promise<void> {
+  const user = await requireUser("/analisis/nuevo");
+  await scoped(user.id).payments.cancelPrepaid(paymentId);
+  redirect("/analisis/nuevo");
+}
+
 export async function startRecheckPayment(id: string): Promise<void> {
   const user = await requireUser(`/analisis/${id}/rechequeo`);
   await checkout(user, id, "recheck");

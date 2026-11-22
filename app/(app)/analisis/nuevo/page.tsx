@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { prepayAnalysis } from "@/app/(app)/analisis/actions";
+import { cancelPrepay, prepayAnalysis } from "@/app/(app)/analisis/actions";
 import { AutoRefresh } from "@/components/app/auto-refresh";
 import { SkeletonBlock } from "@/components/app/flow";
 import { UploadForm } from "@/components/app/upload-form";
@@ -53,7 +53,7 @@ async function Form() {
   const user = await requireUser("/analisis/nuevo");
   const entitlement = await analysisEntitlement(user.id);
   if (entitlement.mode === "none") return <ChoosePlan />;
-  if (entitlement.mode === "pending") return <PendingPrepay />;
+  if (entitlement.mode === "pending") return <PendingPrepay paymentId={entitlement.paymentId} />;
   return <UploadForm />;
 }
 
@@ -86,11 +86,17 @@ function ChoosePlan() {
 }
 
 /** Ya inició el pago único, falta que Mercado Pago lo confirme. */
-function PendingPrepay() {
+function PendingPrepay({ paymentId }: { paymentId: string }) {
   return (
     <div className="flex max-w-[620px] flex-col gap-3">
       <AutoRefresh />
       <p className="text-ink-2">Estamos esperando que se confirme tu pago. Esta pantalla se actualiza sola.</p>
+      <p className="text-[13.5px] text-ink-3">Si ya pagaste, puede demorar unos minutos. Si no llegaste a pagar o te arrepentiste, podés cancelar este intento.</p>
+      <form action={cancelPrepay.bind(null, paymentId)}>
+        <Button type="submit" variant="outline">
+          Cancelar este intento
+        </Button>
+      </form>
     </div>
   );
 }

@@ -271,6 +271,12 @@ export function scoped(userId: string, db: Db = defaultDb()) {
       async linkPrepaid(paymentId: string, analysisId: string) {
         await db.update(payments).set({ analysisId }).where(and(eq(payments.id, paymentId), eq(payments.userId, userId), isNull(payments.analysisId)));
       },
+      async cancelPrepaid(paymentId: string) {
+        await db
+          .update(payments)
+          .set({ status: "cancelled" })
+          .where(and(eq(payments.id, paymentId), eq(payments.userId, userId), isNull(payments.analysisId), eq(payments.status, "pending")));
+      },
     },
     rechecks: {
       /**
