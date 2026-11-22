@@ -171,7 +171,7 @@ export function scoped(userId: string, db: Db = defaultDb()) {
       },
       async supportingDocs(id: string) {
         if (!(await getAnalysis(id))) return [];
-        return db.select({ label: documents.label }).from(documents).where(and(eq(documents.analysisId, id), eq(documents.role, "supporting")));
+        return db.select({ label: documents.label, text: documents.text }).from(documents).where(and(eq(documents.analysisId, id), eq(documents.role, "supporting")));
       },
       async clauses(id: string) {
         if (!(await getAnalysis(id))) return [];

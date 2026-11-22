@@ -104,6 +104,12 @@ async function recordUsage(
   }
 }
 
+let maxOutputTokens: Promise<number> | undefined;
+function modelMaxTokens(): Promise<number> {
+  maxOutputTokens ??= client.models.retrieve(MODEL).then((m) => m.max_tokens ?? 16000);
+  return maxOutputTokens;
+}
+
 function pageBlock(page: PageImage): Anthropic.ContentBlockParam {
   const data = Buffer.from(page.bytes).toString("base64");
   if (page.mime === "application/pdf") {
@@ -127,7 +133,7 @@ export const anthropicAi: AiProvider = {
 
     const response = await client.messages.parse({
       model: MODEL,
-      max_tokens: 16000,
+      max_tokens: await modelMaxTokens(),
       output_config: { format: zodOutputFormat(PagesSchema) },
       messages: [{ role: "user", content: [...pages.map(pageBlock), { type: "text", text: instructions }] }],
     });
@@ -139,7 +145,7 @@ export const anthropicAi: AiProvider = {
     const contract = clauses.map((c) => `${c.title}\n${c.text}`).join("\n\n");
     const response = await client.messages.parse({
       model: MODEL,
-      max_tokens: 4096,
+      max_tokens: await modelMaxTokens(),
       output_config: { format: zodOutputFormat(FIELDS_SCHEMA_BY_TYPE[contractType]) },
       messages: [
         {
@@ -159,7 +165,7 @@ export const anthropicAi: AiProvider = {
       : "";
     const response = await client.messages.parse({
       model: MODEL,
-      max_tokens: 8192,
+      max_tokens: await modelMaxTokens(),
       output_config: { format: zodOutputFormat(RisksSchema) },
       messages: [{ role: "user", content: `${checklist}${supportingBlock}\n\nContrato (cada cláusula con su número):\n\n${contract}` }],
     });
