@@ -45,7 +45,6 @@ export async function prepareUploads(files: z.input<typeof fileSchema>[]): Promi
 
 const uploadedSchema = z.object({ key: z.string(), type: z.string(), size: z.coerce.number().int().positive() });
 const supportingDocSchema = uploadedSchema.extend({ name: z.string().trim().min(1).max(200) });
-const MAX_SUPPORTING_DOCS = 5;
 
 const startSchema = z.discriminatedUnion("method", [
   z.object({ method: z.literal("archivo"), file: uploadedSchema }),
@@ -76,8 +75,8 @@ export async function startAnalysis(_: FormState, form: FormData): Promise<FormS
   }
   const input = parsed.data;
 
-  const supportingParsed = z.array(supportingDocSchema).max(MAX_SUPPORTING_DOCS).safeParse(json(form.get("supportingDocs")) ?? []);
-  if (!supportingParsed.success) return { error: `Podés adjuntar hasta ${MAX_SUPPORTING_DOCS} documentos adicionales.` };
+  const supportingParsed = z.array(supportingDocSchema).safeParse(json(form.get("supportingDocs")) ?? []);
+  if (!supportingParsed.success) return { error: "No pudimos recibir los documentos adicionales. Probá de nuevo." };
   const supporting = supportingParsed.data;
 
   // Las claves las firmó prepareUploads para este usuario; igual se revisa que

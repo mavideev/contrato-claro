@@ -12,7 +12,6 @@ import { useIsMobile } from "./use-is-mobile";
 // El archivo sube directo a S3 antes de llamar a la acción (no viaja en el formulario).
 
 const MAX_MB = 20;
-const MAX_SUPPORTING = 5;
 
 /** Sube el archivo elegido y le pasa a la acción solo la clave. */
 async function submit(prev: FormState, form: FormData): Promise<FormState> {
@@ -100,15 +99,8 @@ export function UploadForm() {
       setSupportingError(`"${badType.name}" tiene que ser un PDF, un Word o una foto.`);
       return;
     }
-    setSupportingFiles((prev) => {
-      const merged = [...prev, ...newFiles];
-      if (merged.length > MAX_SUPPORTING) {
-        setSupportingError(`Podés adjuntar hasta ${MAX_SUPPORTING} documentos.`);
-        return prev;
-      }
-      setSupportingError(null);
-      return merged;
-    });
+    setSupportingError(null);
+    setSupportingFiles((prev) => [...prev, ...newFiles]);
   }
 
   function removeSupporting(index: number) {
@@ -247,9 +239,7 @@ export function UploadForm() {
             }}
             className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 border-dashed border-[#B9C4CC] bg-surface p-5 text-center text-[15px] text-ink-2"
           >
-            {supportingFiles.length >= MAX_SUPPORTING ? (
-              <span className="font-semibold text-ink">Llegaste al máximo de {MAX_SUPPORTING}</span>
-            ) : supportingFiles.length ? (
+            {supportingFiles.length ? (
               <span>
                 Arrastrá otro acá o <span className="font-semibold text-primary-hover underline">elegí uno más</span>
               </span>
@@ -258,11 +248,10 @@ export function UploadForm() {
                 Arrastrá tus archivos acá o <span className="font-semibold text-primary-hover underline">elegilos desde tu dispositivo</span>
               </span>
             )}
-            <span className="text-[13px] text-ink-3">PDF, Word o foto · hasta {MAX_SUPPORTING}, {MAX_MB} MB cada uno</span>
+            <span className="text-[13px] text-ink-3">PDF, Word o foto · hasta {MAX_MB} MB cada uno</span>
             <input
               type="file"
               multiple
-              disabled={supportingFiles.length >= MAX_SUPPORTING}
               aria-label="Documentos adicionales"
               accept=".pdf,.docx,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               onChange={(e) => {
