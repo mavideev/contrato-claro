@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, ne, sql } from "drizzle-orm";
 import { NonRetriableError } from "inngest";
 import { analyses, clauses as clausesTable, documents, payments, subscriptionCycles } from "@/db/schema";
 import { aiProvider } from "@/lib/ai/provider";
@@ -8,6 +8,7 @@ import { splitClauses } from "@/lib/extraction/clauses";
 import { ExtractionError } from "@/lib/extraction/read";
 import { readDocumentPages } from "@/lib/extraction/read-with-ai";
 import { inngest } from "@/lib/inngest/client";
+import { getObjectBytes } from "@/lib/storage/s3";
 
 // Extracción (spec 05, `analysis/uploaded`): texto → cláusulas → datos clave →
 // `awaiting_confirmation`. Si el contrato no se puede leer, queda en `failed`
@@ -48,7 +49,7 @@ export const extractAnalysis = inngest.createFunction(
     const clauses = splitClauses(read.pages);
     console.log("[análisis] cláusulas detectadas", { analysisId, clauses: clauses.length });
 
-    const [{ contractType }] = await db().select({ contractType: analyses.contractType }).from(analyses).where(eq(analyses.id, analysisId)).limit(1);
+    const [{ contractType, userId }] = await db().select({ contractType: analyses.contractType, userId: analyses.userId }).from(analyses).where(eq(analyses.id, analysisId)).limit(1);
     const fields = await step.run("datos clave", () => aiProvider().extractFields(clauses, contractType, { analysisId }));
     console.log("[análisis] datos clave extraídos", { analysisId, ai: aiProvider().name, camposLeidos: Object.values(fields).filter(Boolean).length });
 
@@ -56,17 +57,25 @@ export const extractAnalysis = inngest.createFunction(
       const docs = await db().select().from(documents).where(and(eq(documents.analysisId, analysisId), eq(documents.role, "supporting")));
       return Promise.all(
         docs.map(async (doc) => {
+          const bytes = await getObjectBytes(doc.storageKey);
+          const hash = sha256(bytes);
+          const reused = await findReusedSupporting(userId, hash);
+          if (reused) {
+            console.log("[análisis] documento adicional reusado, no se vuelve a leer con IA", { analysisId, documentId: doc.id });
+            return { documentId: doc.id, text: reused.text, pageCount: reused.pageCount, sha256: hash, charged: 0 };
+          }
           try {
             const result = await readDocumentPages(doc, analysisId);
-            return { documentId: doc.id, text: result.pages.join("\n\n"), pageCount: result.pages.length };
+            const text = result.pages.join("\n\n");
+            return { documentId: doc.id, text, pageCount: result.pages.length, sha256: result.sha256, charged: result.pages.length };
           } catch (err) {
             console.error("[análisis] no se pudo leer un documento adicional", { analysisId, documentId: doc.id, err });
-            return { documentId: doc.id, text: "", pageCount: 0 };
+            return { documentId: doc.id, text: "", pageCount: 0, sha256: hash, charged: 0 };
           }
         }),
       );
     });
-    const supportingPages = supporting.reduce((n, s) => n + s.pageCount, 0);
+    const supportingPages = supporting.reduce((n, s) => n + s.charged, 0);
     console.log("[análisis] documentos adicionales leídos", { analysisId, documentos: supporting.length, paginas: supportingPages });
 
     await step.run("guardar", async () => {
@@ -82,7 +91,7 @@ export const extractAnalysis = inngest.createFunction(
         await tx.delete(clausesTable).where(eq(clausesTable.analysisId, analysisId));
         await tx.insert(clausesTable).values(clauses.map((c) => ({ ...c, analysisId, sha256: sha256(c.text) })));
         for (const s of supporting) {
-          await tx.update(documents).set({ text: s.text, pageCount: s.pageCount }).where(eq(documents.id, s.documentId));
+          await tx.update(documents).set({ text: s.text, pageCount: s.pageCount, sha256: s.sha256 }).where(eq(documents.id, s.documentId));
         }
 
         // Suscripción (spec 06): se descuenta recién acá, con la cantidad real de
@@ -104,6 +113,16 @@ export const extractAnalysis = inngest.createFunction(
 );
 
 const sha256 = (data: Uint8Array | string) => createHash("sha256").update(data).digest("hex");
+
+async function findReusedSupporting(userId: string, hash: string): Promise<{ text: string; pageCount: number } | null> {
+  const [row] = await db()
+    .select({ text: documents.text, pageCount: documents.pageCount })
+    .from(documents)
+    .innerJoin(analyses, eq(documents.analysisId, analyses.id))
+    .where(and(eq(analyses.userId, userId), eq(documents.role, "supporting"), eq(documents.sha256, hash), isNotNull(documents.text), ne(documents.text, "")))
+    .limit(1);
+  return row?.text ? { text: row.text, pageCount: row.pageCount ?? 0 } : null;
+}
 
 async function originalDocument(analysisId: string) {
   const [doc] = await db()
