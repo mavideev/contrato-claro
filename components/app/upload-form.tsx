@@ -70,7 +70,7 @@ const METHODS: { value: Method; label: string; hint: string; icon: ReactNode; mo
 
 export function UploadForm() {
   const isMobile = useIsMobile();
-  const [contractType, setContractType] = useState<ContractType>("rental");
+  const [contractType, setContractType] = useState<ContractType | null>(null);
   const [chosen, setChosen] = useState<Method | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -128,7 +128,7 @@ export function UploadForm() {
       }}
       className="flex max-w-[620px] flex-1 flex-col gap-5 md:gap-6"
     >
-      <input type="hidden" name="contractType" value={contractType} />
+      <input type="hidden" name="contractType" value={contractType ?? ""} />
       <input type="hidden" name="method" value={method} />
 
       <fieldset className="flex flex-col gap-2.5">
@@ -150,6 +150,7 @@ export function UploadForm() {
             </button>
           ))}
         </div>
+        {!contractType && <p className="text-[13px] text-ink-3">Elegí qué tipo de contrato es.</p>}
       </fieldset>
 
       <fieldset className="flex flex-col gap-2.5">
@@ -303,7 +304,7 @@ export function UploadForm() {
             Abrir cámara
           </Link>
         ) : (
-          <Button type="submit" disabled={pending || (method === "archivo" && !!fileError) || !!supportingError} className="min-h-[52px] w-full text-[17px]">
+          <Button type="submit" disabled={pending || !contractType || (method === "archivo" && !!fileError) || !!supportingError} className="min-h-[52px] w-full text-[17px]">
             {pending ? (method === "archivo" ? "Subiendo…" : "Enviando…") : "Analizar contrato"}
           </Button>
         )}

@@ -12,6 +12,7 @@ const PHOTO = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQ
 
 /** Pega el contrato de muestra y espera a que termine la lectura. */
 async function pasteContract(page: Page) {
+  await page.getByRole("button", { name: "Alquiler", exact: true }).click();
   await page.getByRole("button", { name: "Pegar texto" }).click();
   await page.getByLabel("Texto del contrato").fill(CONTRACT);
   await page.getByRole("button", { name: "Analizar contrato" }).click();
@@ -131,6 +132,7 @@ test.describe("con un usuario nuevo", () => {
     const [, guiones, articulos] = sampleContracts();
 
     const pdf = Buffer.from(await contractPdf(articulos.text, 10));
+    await page.getByRole("button", { name: "Alquiler", exact: true }).click();
     // Si el archivo se elige antes de que la página termine de cargar, React no ve el cambio: se reintenta.
     await expect(async () => {
       await page.getByLabel("Archivo del contrato").setInputFiles({ name: "contrato.pdf", mimeType: "application/pdf", buffer: pdf });
@@ -144,6 +146,7 @@ test.describe("con un usuario nuevo", () => {
 
     await page.goto("/analisis/nuevo");
     await payForAnalysis(page);
+    await page.getByRole("button", { name: "Alquiler", exact: true }).click();
     await page.getByLabel("Archivo del contrato").setInputFiles({ name: "contrato.docx", mimeType: "", buffer: Buffer.from(await contractDocx(guiones.text)) });
     await page.getByRole("button", { name: "Analizar contrato" }).click();
     await expect(page).toHaveURL(/\/confirmar$/, { timeout: 30_000 });
@@ -156,6 +159,7 @@ test.describe("con un usuario nuevo", () => {
     test.skip(info.project.name !== "desktop", "un solo recorrido alcanza");
     await signUpAndVerify(page, request);
     await payForAnalysis(page);
+    await page.getByRole("button", { name: "Alquiler", exact: true }).click();
     await page.getByLabel("Archivo del contrato").setInputFiles({ name: "roto.pdf", mimeType: "application/pdf", buffer: Buffer.from("no soy un pdf") });
     await page.getByRole("button", { name: "Analizar contrato" }).click();
     await expect(page.getByRole("heading", { name: "No pudimos leer tu contrato" })).toBeVisible({ timeout: 30_000 });
