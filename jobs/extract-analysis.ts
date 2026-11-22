@@ -52,7 +52,7 @@ export const extractAnalysis = inngest.createFunction(
     const fields = await step.run("datos clave", () => aiProvider().extractFields(clauses, contractType, { analysisId }));
     console.log("[análisis] datos clave extraídos", { analysisId, ai: aiProvider().name, camposLeidos: Object.values(fields).filter(Boolean).length });
 
-    const supporting = await step.run("leer documentos de respaldo", async () => {
+    const supporting = await step.run("leer documentos adicionales", async () => {
       const docs = await db().select().from(documents).where(and(eq(documents.analysisId, analysisId), eq(documents.role, "supporting")));
       return Promise.all(
         docs.map(async (doc) => {
@@ -60,14 +60,14 @@ export const extractAnalysis = inngest.createFunction(
             const result = await readDocumentPages(doc, analysisId);
             return { documentId: doc.id, text: result.pages.join("\n\n"), pageCount: result.pages.length };
           } catch (err) {
-            console.error("[análisis] no se pudo leer un documento de respaldo", { analysisId, documentId: doc.id, err });
+            console.error("[análisis] no se pudo leer un documento adicional", { analysisId, documentId: doc.id, err });
             return { documentId: doc.id, text: "", pageCount: 0 };
           }
         }),
       );
     });
     const supportingPages = supporting.reduce((n, s) => n + s.pageCount, 0);
-    console.log("[análisis] documentos de respaldo leídos", { analysisId, documentos: supporting.length, paginas: supportingPages });
+    console.log("[análisis] documentos adicionales leídos", { analysisId, documentos: supporting.length, paginas: supportingPages });
 
     await step.run("guardar", async () => {
       await db().transaction(async (tx) => {
@@ -86,7 +86,7 @@ export const extractAnalysis = inngest.createFunction(
         }
 
         // Suscripción (spec 06): se descuenta recién acá, con la cantidad real de
-        // páginas (contrato + documentos de respaldo), y solo una vez (pagesCharged
+        // páginas (contrato + documentos adicionales), y solo una vez (pagesCharged
         // hace de candado ante reintentos).
         const totalPages = read.pages.length + supportingPages;
         if (current.billingMode === "subscription" && current.subscriptionCycleId && current.pagesCharged == null) {

@@ -39,7 +39,7 @@ async function Confirm({ params }: Pick<PageProps<"/analisis/[id]/confirmar">, "
           {fromPhoto ? "Los leímos de tu foto. Corregí lo que haga falta antes de analizar." : "Los leímos de tu contrato. Corregí lo que haga falta antes de analizar."}
         </p>
         {supportingDocs.length > 0 && (
-          <p className="text-[13.5px] text-ink-3">Documentos de respaldo adjuntos: {supportingDocs.map((d) => d.label).join(", ")}</p>
+          <p className="text-[13.5px] text-ink-3">Documentos adicionales adjuntos: {supportingDocs.map((d) => d.label).join(", ")}</p>
         )}
       </div>
       <ConfirmForm

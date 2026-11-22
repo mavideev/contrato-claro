@@ -77,7 +77,7 @@ export async function startAnalysis(_: FormState, form: FormData): Promise<FormS
   const input = parsed.data;
 
   const supportingParsed = z.array(supportingDocSchema).max(MAX_SUPPORTING_DOCS).safeParse(json(form.get("supportingDocs")) ?? []);
-  if (!supportingParsed.success) return { error: `Podés adjuntar hasta ${MAX_SUPPORTING_DOCS} documentos de respaldo.` };
+  if (!supportingParsed.success) return { error: `Podés adjuntar hasta ${MAX_SUPPORTING_DOCS} documentos adicionales.` };
   const supporting = supportingParsed.data;
 
   // Las claves las firmó prepareUploads para este usuario; igual se revisa que

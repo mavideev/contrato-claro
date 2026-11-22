@@ -153,7 +153,7 @@ export const anthropicAi: AiProvider = {
   async analyzeRisks(clauses: Clause[], checklist: string, _contractType: ContractType, supportingText: string, context?: AiCallContext) {
     const contract = clauses.map((c) => `Cláusula ${c.number} — ${c.title}\n${c.text}`).join("\n\n");
     const supportingBlock = supportingText
-      ? `\n\nAdemás del contrato, se adjuntaron estos documentos de respaldo. Usalos para verificar lo que dice el contrato (por ejemplo, confirmar el estado de dominio contra un informe de dominio adjunto). Si hay una contradicción, marcá "high" en la cláusula del CONTRATO a la que corresponde — estos documentos no tienen número de cláusula propio, nunca cites uno de acá.\n\n${supportingText}`
+      ? `\n\nAdemás del contrato, se adjuntaron estos documentos adicionales. Usalos para verificar lo que dice el contrato (por ejemplo, confirmar el estado de dominio contra un informe de dominio adjunto). Si hay una contradicción, marcá "high" en la cláusula del CONTRATO a la que corresponde — estos documentos no tienen número de cláusula propio, nunca cites uno de acá.\n\n${supportingText}`
       : "";
     const response = await client.messages.parse({
       model: MODEL,

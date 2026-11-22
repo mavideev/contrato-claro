@@ -236,7 +236,7 @@ export function UploadForm() {
       {method !== "foto" && (
         <fieldset className="flex flex-col gap-2.5">
           <legend className="mb-2.5">
-            <Kicker>Documentos de respaldo (opcional)</Kicker>
+            <Kicker>Documentos adicionales (opcional)</Kicker>
           </legend>
           <label
             onDragOver={(e) => e.preventDefault()}
@@ -262,7 +262,7 @@ export function UploadForm() {
               type="file"
               multiple
               disabled={supportingFiles.length >= MAX_SUPPORTING}
-              aria-label="Documentos de respaldo"
+              aria-label="Documentos adicionales"
               accept=".pdf,.docx,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               onChange={(e) => {
                 addSupporting(Array.from(e.currentTarget.files ?? []));
