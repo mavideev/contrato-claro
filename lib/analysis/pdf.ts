@@ -91,6 +91,12 @@ export async function buildReportPdf(analysis: Analysis, clauses: Clause[], find
     { size: 9, color: LEVEL_COLOR.attention, gap: 16 },
   );
 
+  if (analysis.conclusion) {
+    text("Conclusión y recomendación", { size: 13, font: bold, gap: 8 });
+    for (const paragraph of analysis.conclusion.split("\n\n")) text(paragraph, { size: 10, gap: 8 });
+    y -= 10;
+  }
+
   const byClause = new Map(clauses.map((c) => [c.id, c]));
   const order: Record<Finding["level"], number> = { high: 0, attention: 1, none: 2 };
   const flagged = findings.slice().sort((a, b) => order[a.level] - order[b.level]);

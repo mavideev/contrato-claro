@@ -60,7 +60,7 @@ describe("scoped()", () => {
 });
 
 describe("scoped(): escrituras", () => {
-  const confirmValues = { confirmedFields: { property: "Test 123" }, signingDate: "2026-11-02", propertyLabel: "Test 123", preview: SAMPLE_PREVIEW };
+  const confirmValues = { confirmedFields: { property: "Test 123" }, signingDate: "2026-11-02", propertyLabel: "Test 123", preview: SAMPLE_PREVIEW, viewerRole: "tenant" };
 
   it("crear, confirmar y no volver a editar después de pagar", async () => {
     const me = scoped(demoId);

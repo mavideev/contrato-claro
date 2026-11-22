@@ -5,7 +5,7 @@ import { confirmAnalysis } from "@/app/(app)/analisis/actions";
 import { ConfirmForm, type AmountSource } from "@/components/app/confirm-form";
 import { FlowPage, SkeletonBlock } from "@/components/app/flow";
 import { BackLink, Title } from "@/components/ui/typography";
-import { fieldsFor } from "@/lib/analysis/fields";
+import { fieldsFor, viewerRolesFor } from "@/lib/analysis/fields";
 import { loadAnalysis } from "@/lib/analysis/load";
 import { EDITABLE_STATUSES } from "@/lib/db/scoped";
 
@@ -47,6 +47,7 @@ async function Confirm({ params }: Pick<PageProps<"/analisis/[id]/confirmar">, "
       <ConfirmForm
         action={confirmAnalysis.bind(null, analysis.id)}
         fields={fieldsFor(analysis.contractType)}
+        viewerRoles={viewerRolesFor(analysis.contractType)}
         values={analysis.confirmedFields ?? {}}
         signingDate={analysis.signingDate}
         fromPhoto={fromPhoto}

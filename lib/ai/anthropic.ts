@@ -6,7 +6,7 @@ import { aiUsage, type ConfirmedFields } from "@/db/schema";
 import { db } from "@/lib/db";
 import { ExtractionError } from "@/lib/extraction/read";
 import type { Clause } from "@/lib/extraction/clauses";
-import type { AiCallContext, AiProvider, ContractType, PageImage, RiskFinding } from "./types";
+import type { AiCallContext, AiProvider, ContractType, PageImage, RiskFinding, RisksResult } from "./types";
 
 const MODEL = "claude-haiku-5-5";
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
@@ -26,6 +26,7 @@ const RisksSchema = z.object({
       whatToAsk: z.string().optional(),
     }),
   ),
+  conclusion: z.string(),
 });
 
 const short = () => z.string().max(300).optional();
@@ -160,16 +161,19 @@ export const anthropicAi: AiProvider = {
     return (response.parsed_output ?? {}) satisfies ConfirmedFields;
   },
 
-  async analyzeRisks(clauses: Clause[], checklist: string, _contractType: ContractType, supportingText: string, context?: AiCallContext) {
+  async analyzeRisks(clauses: Clause[], checklist: string, _contractType: ContractType, supportingText: string, viewerRoleLabel: string | null, context?: AiCallContext): Promise<RisksResult> {
     const contract = clauses.map((c) => `Cláusula ${c.number} — ${c.title}\n${c.text}`).join("\n\n");
     const supportingBlock = supportingText
       ? `\n\nAdemás del contrato, se adjuntaron estos documentos adicionales. Usalos para verificar lo que dice el contrato (por ejemplo, confirmar el estado de dominio contra un informe de dominio adjunto). Si hay una contradicción, marcá "high" en la cláusula del CONTRATO a la que corresponde — estos documentos no tienen número de cláusula propio, nunca cites uno de acá.\n\n${supportingText}`
       : "";
+    const conclusionBlock = `\n\nAdemás de los hallazgos por cláusula, completá el campo "conclusion": un cierre en lenguaje simple y claro, sin jerga legal sin explicar, pensado para ${
+      viewerRoleLabel ? `la parte "${viewerRoleLabel}"` : "quien lee esto"
+    } — qué proteger específicamente desde ese lugar, no en términos neutros. Incluí: una conclusión general (¿el contrato está razonablemente equilibrado o tiene problemas serios para esa parte?), entre 2 y 4 recomendaciones concretas, y qué pedir o cambiar antes de firmar.`;
     const stream = client.messages.stream({
       model: MODEL,
       max_tokens: await modelMaxTokens(),
       output_config: { format: zodOutputFormat(RisksSchema) },
-      messages: [{ role: "user", content: `${checklist}${supportingBlock}\n\nContrato (cada cláusula con su número):\n\n${contract}` }],
+      messages: [{ role: "user", content: `${checklist}${supportingBlock}${conclusionBlock}\n\nContrato (cada cláusula con su número):\n\n${contract}` }],
     });
     const response = await stream.finalMessage();
     await recordUsage(context, "analyze_risks", response.usage);
@@ -180,6 +184,6 @@ export const anthropicAi: AiProvider = {
     if (valid.length < findings.length) {
       console.error("[análisis] hallazgos sin cláusula válida, descartados", { analysisId: context?.analysisId, descartados: findings.length - valid.length });
     }
-    return valid;
+    return { findings: valid, conclusion: response.parsed_output?.conclusion ?? "" };
   },
 };

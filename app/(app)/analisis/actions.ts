@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { contractType as contractTypeEnum } from "@/db/schema";
-import { fieldsFor } from "@/lib/analysis/fields";
+import { fieldsFor, viewerRolesFor } from "@/lib/analysis/fields";
 import { samplePreview } from "@/lib/analysis/sample-report";
 import { requireUser, type CurrentUser } from "@/lib/auth/session";
 import { analysisEntitlement } from "@/lib/billing/entitlement";
@@ -169,18 +169,21 @@ export async function confirmAnalysis(id: string, _: FormState, form: FormData):
   if (!analysis) return { error: "Este análisis ya no se puede editar." };
 
   const fields = fieldsFor(analysis.contractType);
+  const viewerRoles = viewerRolesFor(analysis.contractType);
   const confirmSchema = z.object({
     ...Object.fromEntries(fields.map((f) => [f.key, z.string().trim().max(500)])),
     signingDate: z.union([z.literal(""), z.iso.date({ error: "Revisá la fecha de firma." })]),
+    viewerRole: z.enum(viewerRoles.map((r) => r.key) as [string, ...string[]], { error: "Elegí quién sos vos en este contrato." }),
   });
   const parsed = confirmSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
+    if (issue.path[0] === "viewerRole") return { error: "Elegí quién sos vos en este contrato." };
     const field = fields.find((f) => f.key === issue.path[0]);
     return { error: field ? `"${field.label}" es demasiado largo. Acortalo e intentá de nuevo.` : "Revisá los datos e intentá de nuevo." };
   }
 
-  const { signingDate, ...rest } = parsed.data as Record<string, string>;
+  const { signingDate, viewerRole, ...rest } = parsed.data as Record<string, string>;
   const confirmedFields = Object.fromEntries(fields.map((f) => [f.key, rest[f.key] ?? ""]));
   // Etapa 2: vista previa de ejemplo sobre las cláusulas reales (la checklist con IA es la etapa 3).
   const row = await db.analyses.confirm(id, {
@@ -188,6 +191,7 @@ export async function confirmAnalysis(id: string, _: FormState, form: FormData):
     signingDate: signingDate || null,
     propertyLabel: confirmedFields.property || null,
     preview: samplePreview(await db.analyses.clauses(id)),
+    viewerRole,
   });
   if (!row) {
     console.error("[análisis] no se pudo confirmar (estado inválido)", { analysisId: id });

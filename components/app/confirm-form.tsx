@@ -5,7 +5,7 @@ import type { FormState } from "@/app/(app)/analisis/actions";
 import { BottomBar } from "@/components/app/flow";
 import { Button, buttonClass } from "@/components/ui/button";
 import type { ConfirmedFields } from "@/db/schema";
-import type { FIELDS_BY_TYPE } from "@/lib/analysis/fields";
+import type { FIELDS_BY_TYPE, viewerRolesFor } from "@/lib/analysis/fields";
 
 // Prototipo 3 · Confirmar datos / móvil 4. Si el origen es una foto, el monto
 // queda en «Revisá» hasta que se toca, con el aviso al costado.
@@ -16,6 +16,7 @@ export type AmountSource = { label: string; before: string; highlight: string; a
 type Props = {
   action: (state: FormState, form: FormData) => Promise<FormState>;
   fields: (typeof FIELDS_BY_TYPE)[keyof typeof FIELDS_BY_TYPE];
+  viewerRoles: ReturnType<typeof viewerRolesFor>;
   values: ConfirmedFields;
   signingDate: string | null;
   fromPhoto: boolean;
@@ -24,7 +25,7 @@ type Props = {
 
 const labelClass = "text-xs font-semibold tracking-[0.08em] text-ink-3 uppercase md:text-[13px]";
 
-export function ConfirmForm({ action, fields, values, signingDate, fromPhoto, source }: Props) {
+export function ConfirmForm({ action, fields, viewerRoles, values, signingDate, fromPhoto, source }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const [amountChecked, setAmountChecked] = useState(!fromPhoto);
   const warn = !amountChecked;
@@ -37,6 +38,21 @@ export function ConfirmForm({ action, fields, values, signingDate, fromPhoto, so
 
   return (
     <form action={formAction} className="flex flex-1 flex-col gap-4 md:gap-7">
+      <fieldset className="flex flex-col gap-2.5">
+        <legend className={labelClass}>¿Vos sos...?</legend>
+        <div className="flex flex-wrap gap-2.5">
+          {viewerRoles.map((r) => (
+            <label
+              key={r.key}
+              className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-line bg-surface px-4 text-[15px] has-[:checked]:border-primary has-[:checked]:bg-[#F0F8F7] has-[:checked]:font-bold"
+            >
+              <input type="radio" name="viewerRole" value={r.key} required className="accent-primary" />
+              {values[r.key as keyof ConfirmedFields] ? `${r.label} — ${values[r.key as keyof ConfirmedFields]}` : r.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <div className="flex flex-col items-start gap-4 md:flex-row md:gap-8">
         {fromPhoto && (
           <aside className="flex w-full flex-col gap-2 rounded-xl border border-[#E8D3A2] bg-surface px-4 py-3.5 md:order-2 md:w-[340px] md:shrink-0 md:gap-2.5 md:rounded-[14px] md:border-line-soft md:p-6">

@@ -62,6 +62,17 @@ async function Report({ params }: Pick<PageProps<"/analisis/[id]/informe">, "par
 
       <LegalDisclaimer />
 
+      {analysis.conclusion && (
+        <div className="flex flex-col gap-2.5 rounded-[14px] border border-line-soft bg-surface p-4 md:gap-3 md:p-6">
+          <span className="text-[11px] font-bold tracking-[0.08em] text-ink-3 uppercase md:text-xs">Conclusión y recomendación</span>
+          {analysis.conclusion.split("\n\n").map((paragraph, i) => (
+            <p key={i} className="text-sm leading-relaxed text-ink-2 md:text-base">
+              {paragraph}
+            </p>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-col gap-3.5">
         {flagged.map((f, i) => {
           const clause = byClause.get(f.clauseId)!;

@@ -54,3 +54,29 @@ export const FIELDS_BY_TYPE: Record<typeof analyses.$inferSelect.contractType, F
 export function fieldsFor(contractType: typeof analyses.$inferSelect.contractType): FieldDef[] {
   return FIELDS_BY_TYPE[contractType];
 }
+
+type ViewerRole = { key: string; label: string };
+
+const VIEWER_ROLES_BY_TYPE: Record<typeof analyses.$inferSelect.contractType, ViewerRole[]> = {
+  rental: [
+    { key: "tenant", label: "Locatario/a (quien alquila)" },
+    { key: "landlord", label: "Locador/a (dueño/a)" },
+  ],
+  sale: [
+    { key: "buyer", label: "Comprador/a" },
+    { key: "seller", label: "Vendedor/a" },
+  ],
+  boleto: [
+    { key: "buyer", label: "Comprador/a" },
+    { key: "seller", label: "Vendedor/a o desarrolladora" },
+  ],
+};
+
+export function viewerRolesFor(contractType: typeof analyses.$inferSelect.contractType): ViewerRole[] {
+  return VIEWER_ROLES_BY_TYPE[contractType];
+}
+
+export function viewerRoleLabel(contractType: typeof analyses.$inferSelect.contractType, viewerRole: string | null): string | null {
+  if (!viewerRole) return null;
+  return VIEWER_ROLES_BY_TYPE[contractType].find((r) => r.key === viewerRole)?.label ?? null;
+}

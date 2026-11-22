@@ -178,7 +178,7 @@ export function scoped(userId: string, db: Db = defaultDb()) {
         return db.select().from(clauses).where(eq(clauses.analysisId, id)).orderBy(asc(clauses.number));
       },
       /** Guarda los datos confirmados. Solo antes de pagar; si no, devuelve null. */
-      async confirm(id: string, values: { confirmedFields: ConfirmedFields; signingDate: string | null; propertyLabel: string | null; preview: PreviewCounts }) {
+      async confirm(id: string, values: { confirmedFields: ConfirmedFields; signingDate: string | null; propertyLabel: string | null; preview: PreviewCounts; viewerRole: string }) {
         if (!UUID.test(id)) return null;
         const [row] = await db
           .update(analyses)

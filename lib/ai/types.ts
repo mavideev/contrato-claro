@@ -20,12 +20,21 @@ export type RiskFinding = {
   whatToAsk?: string;
 };
 
+export type RisksResult = { findings: RiskFinding[]; conclusion: string };
+
 export interface AiProvider {
   readonly name: "mock" | "anthropic";
   /** Lee el texto de las fotos de cada página (o de un PDF escaneado, como una sola entrada). Devuelve una entrada por página. */
   readPages(pages: PageImage[], context?: AiCallContext): Promise<string[]>;
   /** Los campos críticos (documento base §3) leídos de las cláusulas. Vacío si el contrato no lo dice. */
   extractFields(clauses: Clause[], contractType: ContractType, context?: AiCallContext): Promise<ConfirmedFields>;
-  /** Hallazgos de riesgo por cláusula, según un checklist (etapa 3, spec 05). */
-  analyzeRisks(clauses: Clause[], checklist: string, contractType: ContractType, supportingText: string, context?: AiCallContext): Promise<RiskFinding[]>;
+  /** Hallazgos de riesgo por cláusula y conclusión final, según un checklist (etapa 3, spec 05). */
+  analyzeRisks(
+    clauses: Clause[],
+    checklist: string,
+    contractType: ContractType,
+    supportingText: string,
+    viewerRoleLabel: string | null,
+    context?: AiCallContext,
+  ): Promise<RisksResult>;
 }

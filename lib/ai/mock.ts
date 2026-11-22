@@ -25,8 +25,11 @@ export const mockAi: AiProvider = {
   async extractFields(clauses, contractType) {
     return guessFields(clauses, contractType);
   },
-  async analyzeRisks(clauses, _checklist, contractType) {
-    return guessRisks(clauses, contractType);
+  async analyzeRisks(clauses, _checklist, contractType, _supportingText, viewerRoleLabel) {
+    return {
+      findings: guessRisks(clauses, contractType),
+      conclusion: `Conclusión simulada (sin IA real)${viewerRoleLabel ? ` para la parte "${viewerRoleLabel}"` : ""}: revisá los hallazgos marcados arriba antes de firmar.`,
+    };
   },
 };
 

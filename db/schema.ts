@@ -174,6 +174,8 @@ export const analyses = pgTable(
     confirmedFields: jsonb().$type<ConfirmedFields>(),
     preview: jsonb().$type<PreviewCounts>(),
     errorCode: text(),
+    viewerRole: text(),
+    conclusion: text(),
     ...timestamps,
   },
   (t) => [index().on(t.userId, t.createdAt)],
