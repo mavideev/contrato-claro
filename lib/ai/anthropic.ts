@@ -161,14 +161,18 @@ export const anthropicAi: AiProvider = {
     return (response.parsed_output ?? {}) satisfies ConfirmedFields;
   },
 
-  async analyzeRisks(clauses: Clause[], checklist: string, _contractType: ContractType, supportingText: string, viewerRoleLabel: string | null, context?: AiCallContext): Promise<RisksResult> {
+  async analyzeRisks(clauses: Clause[], checklist: string, contractType: ContractType, supportingText: string, viewerRoleLabel: string | null, context?: AiCallContext): Promise<RisksResult> {
     const contract = clauses.map((c) => `Cláusula ${c.number} — ${c.title}\n${c.text}`).join("\n\n");
     const supportingBlock = supportingText
       ? `\n\nAdemás del contrato, se adjuntaron estos documentos adicionales. Usalos para verificar lo que dice el contrato (por ejemplo, confirmar el estado de dominio contra un informe de dominio o una escritura adjunta). Si hay una contradicción, marcá "high" en la cláusula del CONTRATO a la que corresponde — estos documentos no tienen número de cláusula propio, nunca cites uno de acá. Si alguno de estos documentos ya responde (total o parcialmente) lo que un punto del checklist pide verificar, decilo explícitamente en el hallazgo o en "qué pedir" (ej. "según la escritura adjunta del 9/1/2020..."), en vez de pedir de nuevo algo que ya está adjunto. Si lo adjunto no alcanza para confirmar algo del todo (por ejemplo, es una escritura de una compra anterior y no un informe de dominio actualizado a hoy, que es el único que muestra gravámenes constituidos después de esa escritura), explicá puntualmente qué falta y por qué ese documento adjunto no lo cubre — nunca un pedido genérico que ignore lo que ya se adjuntó. El nombre que sigue a "Documento adjunto:" es solo la etiqueta que eligió quien subió el archivo (puede tener errores de tipeo) — nunca la uses como fuente de un dato (nombre de una persona, una sociedad, una fecha, etc.), esos solo salen del texto del documento. Si un informe de dominio o de gravámenes muestra un asiento marcado como "caducado", "caducidad por plazo de ley" o "cancelado", tratalo como ya sin efecto — no es un gravamen vigente, no lo pidas confirmar como si lo fuera.\n\n${supportingText}`
       : "";
     const conclusionBlock = `\n\nAdemás de los hallazgos por cláusula, completá el campo "conclusion": un cierre en lenguaje simple y claro, sin jerga legal sin explicar, pensado para ${
       viewerRoleLabel ? `la parte "${viewerRoleLabel}"` : "quien lee esto"
-    } — qué proteger específicamente desde ese lugar, no en términos neutros. Incluí: una conclusión general (¿el contrato está razonablemente equilibrado o tiene problemas serios para esa parte?), entre 2 y 4 recomendaciones concretas, y qué pedir o cambiar antes de firmar. Cerrá siempre recomendando confirmar todo esto con un escribano o abogado antes de decidir, y con la inmobiliaria también si hay una de por medio en la operación.`;
+    } — qué proteger específicamente desde ese lugar, no en términos neutros. Incluí: una conclusión general (¿el contrato está razonablemente equilibrado o tiene problemas serios para esa parte?), entre 2 y 4 recomendaciones concretas, y qué pedir o cambiar antes de firmar.${
+      contractType === "rental"
+        ? ""
+        : ` Si la parte vendedora es una empresa (desarrolladora), tené en cuenta que en Argentina este tipo de boletos suele ser un modelo ya armado por la desarrolladora, que no se negocia cláusula por cláusula — distinguí en las recomendaciones qué puntos conviene exigir sí o sí (riesgos altos sobre algo esencial: precio, identificación del inmueble, plazos clave, pérdida de lo pagado) de cuáles son cláusulas estándar de este tipo de operación que probablemente no se muevan, explicando qué significa aceptarlas tal cual para que la persona decida si firma igual.`
+    } Cerrá siempre recomendando confirmar todo esto con un escribano o abogado antes de decidir, y con la inmobiliaria también si hay una de por medio en la operación.`;
     const stream = client.messages.stream({
       model: MODEL,
       max_tokens: await modelMaxTokens(),
