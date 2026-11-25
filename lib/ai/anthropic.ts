@@ -9,6 +9,7 @@ import type { Clause } from "@/lib/extraction/clauses";
 import type { AiCallContext, AiProvider, ContractType, PageImage, RiskFinding, RisksResult } from "./types";
 
 const MODEL = "claude-haiku-5-5";
+const RISK_MODEL = "claude-sonnet-5";
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
 type SupportedImageType = (typeof SUPPORTED_IMAGE_TYPES)[number];
 
@@ -93,22 +94,27 @@ export async function pingAnthropic(): Promise<void> {
 async function recordUsage(
   context: AiCallContext | undefined,
   kind: "read_pages" | "extract_fields" | "analyze_risks",
+  model: string,
   usage: { input_tokens: number; output_tokens: number },
 ) {
   if (!context) return;
   try {
     await db()
       .insert(aiUsage)
-      .values({ analysisId: context.analysisId, kind, model: MODEL, inputTokens: usage.input_tokens, outputTokens: usage.output_tokens });
+      .values({ analysisId: context.analysisId, kind, model, inputTokens: usage.input_tokens, outputTokens: usage.output_tokens });
   } catch (err) {
     console.error("[ai usage]", err);
   }
 }
 
-let maxOutputTokens: Promise<number> | undefined;
-function modelMaxTokens(): Promise<number> {
-  maxOutputTokens ??= client.models.retrieve(MODEL).then((m) => m.max_tokens ?? 16000);
-  return maxOutputTokens;
+const maxOutputTokensByModel = new Map<string, Promise<number>>();
+function modelMaxTokens(model: string): Promise<number> {
+  let cached = maxOutputTokensByModel.get(model);
+  if (!cached) {
+    cached = client.models.retrieve(model).then((m) => m.max_tokens ?? 16000);
+    maxOutputTokensByModel.set(model, cached);
+  }
+  return cached;
 }
 
 function pageBlock(page: PageImage): Anthropic.ContentBlockParam {
@@ -134,12 +140,12 @@ export const anthropicAi: AiProvider = {
 
     const stream = client.messages.stream({
       model: MODEL,
-      max_tokens: await modelMaxTokens(),
+      max_tokens: await modelMaxTokens(MODEL),
       output_config: { format: zodOutputFormat(PagesSchema) },
       messages: [{ role: "user", content: [...pages.map(pageBlock), { type: "text", text: instructions }] }],
     });
     const response = await stream.finalMessage();
-    await recordUsage(context, "read_pages", response.usage);
+    await recordUsage(context, "read_pages", MODEL, response.usage);
     return response.parsed_output?.pages ?? [];
   },
 
@@ -147,7 +153,7 @@ export const anthropicAi: AiProvider = {
     const contract = clauses.map((c) => `${c.title}\n${c.text}`).join("\n\n");
     const stream = client.messages.stream({
       model: MODEL,
-      max_tokens: await modelMaxTokens(),
+      max_tokens: await modelMaxTokens(MODEL),
       output_config: { format: zodOutputFormat(FIELDS_SCHEMA_BY_TYPE[contractType]) },
       messages: [
         {
@@ -157,7 +163,7 @@ export const anthropicAi: AiProvider = {
       ],
     });
     const response = await stream.finalMessage();
-    await recordUsage(context, "extract_fields", response.usage);
+    await recordUsage(context, "extract_fields", MODEL, response.usage);
     return (response.parsed_output ?? {}) satisfies ConfirmedFields;
   },
 
@@ -174,13 +180,14 @@ export const anthropicAi: AiProvider = {
         : ` Si la parte vendedora es una empresa (desarrolladora), tené en cuenta que en Argentina este tipo de boletos suele ser un modelo ya armado por la desarrolladora, que no se negocia cláusula por cláusula — distinguí en las recomendaciones qué puntos conviene exigir sí o sí (riesgos altos sobre algo esencial: precio, identificación del inmueble, plazos clave, pérdida de lo pagado) de cuáles son cláusulas estándar de este tipo de operación que probablemente no se muevan, explicando qué significa aceptarlas tal cual para que la persona decida si firma igual.`
     } Cerrá siempre recomendando confirmar todo esto con un escribano o abogado antes de decidir, y con la inmobiliaria también si hay una de por medio en la operación.`;
     const stream = client.messages.stream({
-      model: MODEL,
-      max_tokens: await modelMaxTokens(),
+      model: RISK_MODEL,
+      max_tokens: await modelMaxTokens(RISK_MODEL),
+      thinking: { type: "adaptive" },
       output_config: { format: zodOutputFormat(RisksSchema) },
       messages: [{ role: "user", content: `${checklist}${supportingBlock}${conclusionBlock}\n\nContrato (cada cláusula con su número):\n\n${contract}` }],
     });
     const response = await stream.finalMessage();
-    await recordUsage(context, "analyze_risks", response.usage);
+    await recordUsage(context, "analyze_risks", RISK_MODEL, response.usage);
 
     const findings = response.parsed_output?.findings ?? [];
     const validNumbers = new Set(clauses.map((c) => c.number));
