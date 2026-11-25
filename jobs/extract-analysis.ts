@@ -49,7 +49,12 @@ export const extractAnalysis = inngest.createFunction(
     const clauses = splitClauses(read.pages);
     console.log("[análisis] cláusulas detectadas", { analysisId, clauses: clauses.length });
 
-    const [{ contractType, userId }] = await db().select({ contractType: analyses.contractType, userId: analyses.userId }).from(analyses).where(eq(analyses.id, analysisId)).limit(1);
+    const [analysisRow] = await db().select({ contractType: analyses.contractType, userId: analyses.userId }).from(analyses).where(eq(analyses.id, analysisId)).limit(1);
+    if (!analysisRow) {
+      console.log("[análisis] se borró durante la extracción", { analysisId });
+      return { analysisId, status: "deleted" };
+    }
+    const { contractType, userId } = analysisRow;
     const fields = await step.run("datos clave", () => aiProvider().extractFields(clauses, contractType, { analysisId }));
     console.log("[análisis] datos clave extraídos", { analysisId, ai: aiProvider().name, camposLeidos: Object.values(fields).filter(Boolean).length });
 
